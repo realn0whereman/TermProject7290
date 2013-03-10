@@ -12,8 +12,34 @@ output stall_out; // the memory system cannot accept anymore requests
 
 endmodule
 
-module LoadStoreQueue();
-  
+/*
+Ex/Mem
+    -clk
+    -Z
+    -alu_out (also the address)
+    -alu_p_out
+    -alu_f_out
+    -wdata
+    -cntrl.m
+    -cntrl.w
+
+mem/Wb
+    -clk
+    -alu_out
+    -mem_out
+    -Z
+    -cntr.w
+
+*/
+
+module LoadStoreQueue(rw_in,addr_in,data_in,cntrl_in,Z_in,data_out,cntrl_out,Z_out);
+  input rw_in;
+  input[31:0] addr_in,data_in;
+  input[15:0] cntrl_in; // TODO change to proper cntrl signal width
+  input[3:0] Z_in;
+  output reg [31:0] data_out;
+  output reg [15:0] cntrl_out; // TODO change to proper cntrl signal width
+  output reg [3:0] Z_out;
 endmodule
 
 //Dummy modules
