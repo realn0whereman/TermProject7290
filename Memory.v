@@ -40,7 +40,7 @@ module LoadStoreQueue(rw_in,addr_in,data_in,cntrl_in,Z_in,data_out,cntrl_out,Z_o
   output reg [31:0] data_out;
   output reg [15:0] cntrl_out; // TODO change to proper cntrl signal width
   output reg [3:0] Z_out;
-  output reg stall_out
+  output reg stall_out;
 endmodule
 
 //Dummy modules
