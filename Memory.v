@@ -32,7 +32,7 @@ mem/Wb
 
 */
 
-module LoadStoreQueue(rw_in,addr_in,data_in,cntrl_in,Z_in,data_out,cntrl_out,Z_out);
+module LoadStoreQueue(rw_in,addr_in,data_in,cntrl_in,Z_in,data_out,cntrl_out,Z_out,stall_out);
   input rw_in;
   input[31:0] addr_in,data_in;
   input[15:0] cntrl_in; // TODO change to proper cntrl signal width
@@ -40,6 +40,7 @@ module LoadStoreQueue(rw_in,addr_in,data_in,cntrl_in,Z_in,data_out,cntrl_out,Z_o
   output reg [31:0] data_out;
   output reg [15:0] cntrl_out; // TODO change to proper cntrl signal width
   output reg [3:0] Z_out;
+  output reg stall_out
 endmodule
 
 //Dummy modules
