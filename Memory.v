@@ -41,6 +41,9 @@ module LoadStoreQueue(rw_in,addr_in,data_in,cntrl_in,Z_in,data_out,cntrl_out,Z_o
   output reg [15:0] cntrl_out; // TODO change to proper cntrl signal width
   output reg [3:0] Z_out;
   output reg stall_out;
+  
+  
+  
 endmodule
 
 //Dummy modules
@@ -51,11 +54,11 @@ module ICache4KB(rw_in,addr_in,data_in,data_out);
         reg[31:0] memory[1023:0];
         integer i;
         initial begin 
-    
-         $readmemh("test.hex", memory);
-         for(i=10;i<1024;i=i+1) begin //TODO get number dynamically
-             memory[i] <= 0;
-         end 
+        
+        for(i=0;i<1024;i=i+1)//TODO get number dynamically
+             memory[i] = 0;
+        $readmemh("test.hex", memory);
+         
         end 
     
         always @(*) begin
