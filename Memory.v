@@ -73,7 +73,6 @@ stall_out_C,empty
       data[id] = data_in_C;
       cntrl[id] = cntrl_in_C;
       Z[id] = Z_in_C;
-      valid[id] = 1;
       
       //send request to mem 
       addr_out_M = addr_in_C;
@@ -94,18 +93,25 @@ stall_out_C,empty
       
     //processing input from mem/output to core
     if(ready_in_M) begin
-      
-      ready_out_C = ready_in_M;
-      addr_out_C = addr[ldstID_in_M];
-      data_out_C = data_in_M;
-      cntrl_out_C = cntrl[ldstID_in_M];
-      Z_out_C = Z[ldstID_in_M];
+      //mark entry as received
+      valid[ldstID_in_M] = ready_in_M;
+      data[ldstID_in_M] = data_in_M;
+ 
+    end
+    //process the oldest memory if it is ready.
+    if(valid[QtailIdx] == 1) begin
+      ready_out_C = valid[QtailIdx];
+      addr_out_C = addr[QtailIdx];
+      data_out_C = data[QtailIdx];
+      cntrl_out_C = cntrl[QtailIdx];
+      Z_out_C = Z[QtailIdx];
       
       //mark as serviced
-      valid[ldstID_in_M] = 0;
+      valid[QtailIdx] = 0;
       Qlength = Qlength - 1;
       QtailIdx = (QtailIdx +1)%16;
     end
+    
     if(Qlength == 0) begin //TODO add full logic here
       empty = 1;
     end else begin
