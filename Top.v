@@ -21,10 +21,6 @@ module pipeline(clk, rst);
   wire [31:0] Rdata_mm, Rdata_wb;
   wire [1:0] WB_wb;
   
-  
-  reg is_jmp; //FIXME
-  reg [31:0] pc_jmp; //FIXME
-  
   reg [1:0] ctrl_ifid;
   reg [1:0] ctrl_idex;
   reg [1:0] ctrl_exmm;
@@ -59,7 +55,7 @@ module pipeline(clk, rst);
   inst_cache fet(.rst(rst), .clk(clk), .pc_n(pc_n_if), .inst(inst_if));
   
   decoder dec(.rst(rst), .clk(clk), .pc_n(pc_n_id), .inst(inst_id), .Pz_id(Z_mm[1:0]), .Pz(ResP_mm), .Rz_id(Z_rb), .Rz(ResI_final),
-    .Fz_id(Z_mm), .Fz(ResF_mm), .imm_s(imm_id), .rw({WB_mm[1], WB_wb[1], WB_mm[3]}), .Px(Px_id), .Py(Py_id), .Rx(Rx_id), .Ry(Ry_id),
+    .Fz_id(Z_mm), .Fz(ResF_mm), .imm_s(imm_id), .rw({WB_mm[3], WB_wb[1], WB_mm[1]}), .Px(Px_id), .Py(Py_id), .Rx(Rx_id), .Ry(Ry_id),
     .Fx(Fx_id), .Fy(Fy_id), .Z(Z_id), .EX(EX_id), .MEM(MEM_id), .WB(WB_id));
     
   execution exe(.EX(EX_ex), .Px(Px_ex), .Py(Py_ex), .Rx(Rx_ex), .Ry(Ry_ex), .Fx(Fx_ex), .Fy(Fy_ex), .imm_s(imm_ex), .pc_n(pc_n_ex), 
