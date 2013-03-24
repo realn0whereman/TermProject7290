@@ -1,6 +1,6 @@
 module alu_control(opcode, alu_control_signals);
   input [5:0] opcode; 
-  output reg [10:0] alu_control_signals; 
+  output reg [17:0] alu_control_signals; 
   //     0 : Reg ID sel
   //   2:1 : sign extension
   //   4:3 : jump signal (reserved); 3: is jump, 4: direct or indirect
@@ -451,7 +451,7 @@ module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, 
   
   wire [3:0] X;
   wire [3:0] Y;
-  wire [3:0] Pid;
+  wire [1:0] Pid;
   wire [17:0] signals;
   wire Pset;
   wire Pval;
@@ -466,7 +466,7 @@ module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, 
   greg_file gregs(.rst(rst), .rw(rw[1]), .X(X), .Y(Y), .Z(Rz_id), .Rz(Rz), .Rx(Rx), .Ry(Ry));
   //freg_file fregs(.rst(rst), .rw(rw[2]), .X(X), .Y(Y), .Z(Z), .Fz(Fz), .Fx(Fy), .Fy(Fy));
   
-  imm_extend immse(.ctr(signals[2:1]), .inst(inst[22:0]), .imm_s(imm_s));
+  imm_extend immse(.ctr(signals[2:1]), .field(inst[22:0]), .imm_s(imm_s));
   
   alu_control ac(.opcode(inst[28:23]), .alu_control_signals(signals));
 

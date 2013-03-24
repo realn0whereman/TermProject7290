@@ -1,6 +1,22 @@
 `timescale 1ns / 100ps
 
+module a_pipeline_test();
+  reg clk;
+  reg rst;
+  
 
+initial begin
+  clk = 1;
+  rst = 1;
+  #1 rst = 0;
+end
+  always begin
+   #1 clk = ~clk;
+  end
+  
+  pipeline TOP(clk, rst);
+  
+endmodule
 
 module a_LSQ_test();
   

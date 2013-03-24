@@ -1,4 +1,4 @@
-module inst_mem(pc, inst);
+/*module inst_mem(pc, inst);
   input [9:0] pc;
   output reg [31:0] inst;
   
@@ -49,6 +49,8 @@ module inst_cache(rst, clk, pc_n, inst);
   
   inst_mem i_mem(.pc(pc_r[9:0]), .inst(inst));
 endmodule
+*/
+
 /*
 module inst_cache(rst, clk, is_jmp, pc_jmp, pc_n, inst);
   input rst;

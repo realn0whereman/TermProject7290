@@ -136,9 +136,20 @@ module ICache4KB(clk,rst,addr_in,data_out);
         always @(rst) begin
           for(i=0;i<1024;i=i+1)
               memory[i] = 0;
-          $readmemh("test.hex", memory);
-        end 
-    
+          //memory[0] = 32'h05110003;
+          memory[0] = 32'b0_00_010100_0000_0000_100000000001000;
+          //              P Pr  Op     Rz   Ry      Imm
+          memory[1] = 32'h05190005;
+          memory[2] = 32'h00000000;
+          memory[3] = 32'h00000000;
+          memory[4] = 32'h00000000;
+          memory[5] = 32'h00000000;
+          memory[6] = 32'h00000000;
+          memory[7] = 32'h00000000;
+          memory[8] = 32'h02a26000;
+          memory[9] = 32'h02eb4000;
+        end
+        
         always @(addr_in,clk) begin
           data_out <= memory[addr_in[9:0]/4];
         end
