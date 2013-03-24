@@ -26,12 +26,12 @@ stall_out_C,empty
 );
   input memR,memW,rst,clk;
   input[31:0] addr_in_C,data_in_C,data_in_M;
-  input[15:0] cntrl_in_C; // TODO change to proper cntrl signal width
+  input[3:0] cntrl_in_C; // TODO change to proper cntrl signal width
   input[3:0] Z_in_C,ldstID_in_M;
   input stall_in_M,ready_in_M;
   output reg [31:0] addr_out_C,data_out_C,addr_out_M;
   output reg [31:0] data_out_M;
-  output reg [15:0] cntrl_out_C; // TODO change to proper cntrl signal width
+  output reg [3:0] cntrl_out_C; // TODO change to proper cntrl signal width
   output reg [3:0] Z_out_C,ldstID_out_M;
   output reg stall_out_C,empty,rw_out_M,valid_out_M,ready_out_C;
   
