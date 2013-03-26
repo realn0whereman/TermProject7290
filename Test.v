@@ -1,14 +1,34 @@
 `timescale 1ns / 100ps
 
+
+
+
+module a_fpu_test();
+  reg clk;
+  reg rst;
+  wire [31:0] Z ;
+initial begin
+  clk = 1;
+  rst = 1;
+  #1 rst = 0;
+end
+  always begin
+   #1 clk = ~clk;
+  end
+  
+                  
+  alu_F fpu(1'b0,clk, 4'b0011, 32'h41200000, 32'h40000000, Z,stall);
+endmodule
+
 module a_pipeline_test();
   reg clk;
   reg rst;
   
 
 initial begin
-  clk = 1;
+  clk = 0;
   rst = 1;
-  #1 rst = 0;
+  #2 rst = 0;
 end
   always begin
    #1 clk = ~clk;

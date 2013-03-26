@@ -1,6 +1,6 @@
 module alu_P(sel, op, A, B, C, Z);
   input sel;
-  input [3:0] op;
+  input [2:0] op;
   input A;
   input B;
   input [31:0] C;
@@ -125,8 +125,100 @@ module alu_I(sel, op, A, B, Z);
   end
 endmodule
 
-module execution(EX, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, result_P, result_I, result_F, Wdata);
+//This module keeps track of the number of stalls to introduce
+//for multi cycle operations.
+//Behavior: Every time a latency input is drive, stall will be high
+// for that many cycles, and then read in a new latency once it has stalled 
+//(the original) latency amount of times.
+module stall_counter(clk,latency,stall);
+  input clk;
+  input [3:0] latency;
+  output reg stall;
+  
+  reg [3:0] cyclesLeft;
+  initial begin
+    cyclesLeft = 0;
+  end
+  
+  always @(posedge clk) begin
+    if(cyclesLeft == 0) begin
+      stall = 0;
+      cyclesLeft = latency;
+    end else begin
+      cyclesLeft = cyclesLeft - 1;
+      stall = 1;
+    end
+      
+  end
+  
+endmodule
+
+module alu_F(sel,clk, op, A, B, Z,stall);
+  input sel,clk;
+  input [3:0] op;
+  input [31:0] A;
+  input [31:0] B;
+  output reg [31:0] Z;
+  output reg stall;
+  
+  wire [31:0] addSubResult;
+  wire stallWire;
+  reg [3:0] latency;
+  reg addSub; // 0 == add, 1 == sub
+  
+  
+  
+  stall_counter stalls(.clk(clk),.latency(latency),.stall(stallWire));
+  
+	FPAddSub addSubFU(
+	.add_sub(addSub),
+	.clock(clk),
+	.dataa(A),
+	.datab(B),
+	.result(addSubResult));
+	
+	//do we need reset for multi cycle ops?
+  always@(posedge clk) begin
+    if (sel == 1'b1) begin
+      stall = stallWire;
+      case(op)
+        //itof
+        //ftoi
+        4'b1010: //fneg
+          begin
+            Z[30:0] = A[30:0];
+            Z[31] = ~A[31];  
+            latency = 0;  
+          end
+        4'b1011: //fadd     
+          begin
+            //maybe set Z = to x?
+            addSub = 0;
+            latency = 7;
+            Z = addSubResult;  
+          end      
+        default:
+          begin
+            Z = 'bx;
+          end
+      endcase
+    end else begin
+      Z = 'bx;
+    end
+  end
+  
+	
+	
+	
+	
+	
+	
+endmodule
+
+
+module execution(EX,clk, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, result_P, result_I, result_F, Wdata);
   input [6:0] EX;
+  input clk;
   input Px;
   input Py;
   input [31:0] Rx;
@@ -149,7 +241,7 @@ module execution(EX, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, result_P, result_I, re
   
   alu_P P1(.sel(!EX[0] & (!EX[4])), .op(EX[3:1]), .A(Py), .B(Px), .C(Ry), .Z(result_P));
   alu_I I1(.sel(EX[0]), .op(EX[4:1]), .A(ALU_src1), .B(ALU_src2), .Z(result_I));
-  
+  //alu_F F1()
   //FIXME
   assign result_F = 'bx;
 endmodule

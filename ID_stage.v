@@ -289,7 +289,7 @@ module alu_control(opcode, alu_control_signals);
         begin
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
-          alu_control_signals[11:5] = 7'b0_0_1011_1;
+          alu_control_signals[11:5] = 7'b0_x_1011_1;
           alu_control_signals[4:3] = 2'bx_x;
           alu_control_signals[2:1] = 2'bxx;
           alu_control_signals[0] = 1'bx;
@@ -298,13 +298,60 @@ module alu_control(opcode, alu_control_signals);
         begin
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
-          alu_control_signals[11:5] = 7'b0_0_1100_1;
+          alu_control_signals[11:5] = 7'b0_x_1100_1;
           alu_control_signals[4:3] = 2'bx_x;
           alu_control_signals[2:1] = 2'bxx;
           alu_control_signals[0] = 1'bx;
-        end   
+        end  
       //5.2 Privileged Instruction
       //5.8 Floating Point Arhithmethic
+      //itof 1000
+      //ftoi 1001
+      6'h39: //fneg
+        begin
+          alu_control_signals[17:14] = 4'b100_0;         
+          alu_control_signals[13:12] = 2'b0_0;
+          alu_control_signals[11:5] = 7'b0_0_1010_0;
+          alu_control_signals[4:3] = 2'bx_x;
+          alu_control_signals[2:1] = 2'bxx;
+          alu_control_signals[0] = 1'b0;
+        end 
+      6'h35: //fadd
+        begin
+          alu_control_signals[17:14] = 4'b100_0;         
+          alu_control_signals[13:12] = 2'b0_0;
+          alu_control_signals[11:5] = 7'b0_0_1011_0;
+          alu_control_signals[4:3] = 2'bx_x;
+          alu_control_signals[2:1] = 2'bxx;
+          alu_control_signals[0] = 1'b0;
+        end 
+      6'h36: //fsub
+        begin
+          alu_control_signals[17:14] = 4'b100_0;         
+          alu_control_signals[13:12] = 2'b0_0;
+          alu_control_signals[11:5] = 7'b0_0_1100_0;
+          alu_control_signals[4:3] = 2'bx_x;
+          alu_control_signals[2:1] = 2'bxx;
+          alu_control_signals[0] = 1'b0;
+        end 
+      6'h37: //fmul
+        begin
+          alu_control_signals[17:14] = 4'b100_0;         
+          alu_control_signals[13:12] = 2'b0_0;
+          alu_control_signals[11:5] = 7'b0_0_1101_0;
+          alu_control_signals[4:3] = 2'bx_x;
+          alu_control_signals[2:1] = 2'bxx;
+          alu_control_signals[0] = 1'b0;
+        end 
+      6'h38: //fdiv
+        begin
+          alu_control_signals[17:14] = 4'b100_0;         
+          alu_control_signals[13:12] = 2'b0_0;
+          alu_control_signals[11:5] = 7'b0_0_1110_0;
+          alu_control_signals[4:3] = 2'bx_x;
+          alu_control_signals[2:1] = 2'bxx;
+          alu_control_signals[0] = 1'b0;
+        end 
       //5.9 Control Flow
       //5.11 User/Kernel Interaction  
         
@@ -424,7 +471,7 @@ module imm_extend(ctr, field, imm_s);
   end
 endmodule
 
-module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, Px, Py, Rx, Ry, Fx, Fy, Z, EX, MEM, WB); //jump target is computed here
+module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, Px, Py, Rx, Ry, Fx, Fy, Z, EX, MEM, WB, Pval); //jump target is computed here
   input clk;
   input rst;
   input [31:0] pc_n;
@@ -448,13 +495,13 @@ module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, 
   output [6:0] EX;
   output [1:0] MEM;
   output [3:0] WB;
+  output Pval;
   
   wire [3:0] X;
   wire [3:0] Y;
   wire [1:0] Pid;
   wire [17:0] signals;
   wire Pset;
-  wire Pval;
   
   assign X = (signals[0] == 0) ? inst[14:11] : inst[22:19];
   assign Y = inst[18:15];
@@ -470,8 +517,8 @@ module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, 
   
   alu_control ac(.opcode(inst[28:23]), .alu_control_signals(signals));
 
-  assign EX = (Pval == 1) ? signals[11:5] : 0;
-  assign MEM = (Pval == 1) ? signals[13:12] : 0;
-  assign WB = (Pval == 1) ? signals[17:14] : 0;
+  assign EX = signals[11:5];
+  assign MEM = signals[13:12];
+  assign WB = signals[17:14];
   
 endmodule

@@ -46,79 +46,81 @@ stall_out_C,empty
   reg[10:0] QtailIdx,Qlength;
 
   
-  //reset/init logic
+
   integer i;
-  always @(rst) begin
-    for(i=0;i<16;i=i+1) begin
-      addr[i] = 0;
-      data[i] = 0;
-      cntrl[i] = 0;
-      Z[i] = 0;
-      valid[i] = 0;
-      
-    end
-    QtailIdx=0;
-    Qlength=0;
-    
-  end
     
   integer id;
-  always @(posedge clk) begin
+  always @(posedge clk or posedge rst) begin
     
-    //Input from core and memory issuing
-    if(memW || memR) begin //on st input
-      id = (QtailIdx + Qlength)%16;
-      //put entry into the store queue
-      addr[id] = addr_in_C;
-      data[id] = data_in_C;
-      cntrl[id] = cntrl_in_C;
-      Z[id] = Z_in_C;
+	   //reset/init logic
+	 if(rst == 1) begin
+		for(i=0;i<16;i=i+1) begin
+			addr[i] = 0;
+			data[i] = 0;
+			cntrl[i] = 0;
+			Z[i] = 0;
+			valid[i] = 0;
       
-      //send request to mem 
-      addr_out_M = addr_in_C;
-      data_out_M = data_in_C;
-      if(memW) begin
-        rw_out_M = 1;
-        
-      end else begin
-        rw_out_M = 0;
-      end
-      valid_out_M = 1;
-      ldstID_out_M = id;
-      
-      Qlength = Qlength + 1;
-    end else begin
-      valid_out_M = 0;  
-    end
-      
-    //processing input from mem/output to core
-    if(ready_in_M) begin
-      //mark entry as received
-      valid[ldstID_in_M] = ready_in_M;
-      data[ldstID_in_M] = data_in_M;
- 
-    end
-    //process the oldest memory if it is ready.
-    if(valid[QtailIdx] == 1) begin
-      ready_out_C = valid[QtailIdx];
-      addr_out_C = addr[QtailIdx];
-      data_out_C = data[QtailIdx];
-      cntrl_out_C = cntrl[QtailIdx];
-      Z_out_C = Z[QtailIdx];
-      
-      //mark as serviced
-      valid[QtailIdx] = 0;
-      Qlength = Qlength - 1;
-      QtailIdx = (QtailIdx +1)%16;
-    end
-    
-    if(Qlength == 0) begin //TODO add full logic here
-      empty = 1;
-    end else begin
-      empty = 0;
-    end
-        
-    stall_out_C = stall_in_M;
+		end
+		QtailIdx=0;
+		Qlength=0;
+	 end else begin
+	 
+		 //Input from core and memory issuing
+		 if(memW || memR) begin //on st input
+			id = (QtailIdx + Qlength)%16;
+			//put entry into the store queue
+			addr[id] = addr_in_C;
+			data[id] = data_in_C;
+			cntrl[id] = cntrl_in_C;
+			Z[id] = Z_in_C;
+			
+			//send request to mem 
+			addr_out_M = addr_in_C;
+			data_out_M = data_in_C;
+			if(memW) begin
+			  rw_out_M = 1;
+			  
+			end else begin
+			  rw_out_M = 0;
+			end
+			valid_out_M = 1;
+			ldstID_out_M = id;
+			
+			Qlength = Qlength + 1;
+		 end else begin
+			valid_out_M = 0;  
+		 end
+			
+		 //processing input from mem/output to core
+		 if(ready_in_M) begin
+			//mark entry as received
+			valid[ldstID_in_M] = ready_in_M;
+			data[ldstID_in_M] = data_in_M;
+	 
+		 end
+		 //process the oldest memory if it is ready.
+		 if(valid[QtailIdx] == 1) begin
+			ready_out_C = valid[QtailIdx];
+			addr_out_C = addr[QtailIdx];
+			data_out_C = data[QtailIdx];
+			cntrl_out_C = cntrl[QtailIdx];
+			Z_out_C = Z[QtailIdx];
+			
+			//mark as serviced
+			valid[QtailIdx] = 0;
+			Qlength = Qlength - 1;
+			QtailIdx = (QtailIdx +1)%16;
+		 end
+		 
+		 if(Qlength == 0) begin //TODO add full logic here
+			empty = 1;
+		 end else begin
+			empty = 0;
+		 end
+			  
+		 stall_out_C = stall_in_M;
+	  end
   end
   
   
@@ -171,48 +173,50 @@ module ICache4KB(clk,rst,addr_in,data_out);
         
         //initialize all state
         integer i;
-        always @(rst) begin 
-         for(i=0;i<1024;i=i+1) begin
-             memory[i] <= 0;
-         end
-         artificialDelayData[0] = 0; 
-         artificialDelayData[1] = 0; 
-         artificialDelayID[0] = 0; 
-         artificialDelayID[1] = 0;
-         artificialDelayReady[0] = 0;
-         artificialDelayReady[1] = 0;
-        end 
         
-        //perform a "shift" on all the state arrays
+        
+        
+        always @(posedge clk or posedge rst) begin
+			if(rst == 1) begin
+				 for(i=0;i<1024;i=i+1) begin
+					memory[i] <= 0;
+				 end
+				artificialDelayData[0] = 0; 
+				artificialDelayData[1] = 0; 
+				artificialDelayID[0] = 0; 
+				artificialDelayID[1] = 0;
+				artificialDelayReady[0] = 0;
+				artificialDelayReady[1] = 0;
+			
+			end else begin
+			//perform a "shift" on all the state arrays
         //this simulates a multi cycle (2 in this case) 
-        always @(posedge clk) begin
-          Rdata = artificialDelayData[1];
-          ldstID_out = artificialDelayID[1];
-          ready_out = artificialDelayReady[1];
-          
-          artificialDelayData[1] = artificialDelayData[0];
-          artificialDelayID[1] = artificialDelayID[0];
-          artificialDelayReady[1] = artificialDelayReady[0];
-          
-          artificialDelayData[0] = 0;
-          artificialDelayID[0] = 0;
-          artificialDelayReady[0] = 0;
+				 Rdata = artificialDelayData[1];
+				 ldstID_out = artificialDelayID[1];
+				 ready_out = artificialDelayReady[1];
+				 
+				 artificialDelayData[1] = artificialDelayData[0];
+				 artificialDelayID[1] = artificialDelayID[0];
+				 artificialDelayReady[1] = artificialDelayReady[0];
+				 
+				 artificialDelayData[0] = 0;
+				 artificialDelayID[0] = 0;
+				 artificialDelayReady[0] = 0;
+				 
+				 //if LD or ST is fed into the memory, complete it and buffer it
+				 if(memW || memR) begin
+					if(memW) begin
+						memory[addr[9:0]/4] <= Wdata;
+						artificialDelayData[0] = Wdata;
+					end 
+					else if(memR) begin
+						artificialDelayData[0] <= memory[addr[9:0]/4];  
+					end
+						artificialDelayID[0] = ldstID;
+						artificialDelayReady[0] = 1;
+				 end
+			 end
         end
-    
-        //if LD or ST is fed into the memory, complete it and buffer it
-        always @(posedge clk) begin
-          if(memW || memR) begin
-            if(memW) begin
-              memory[addr[9:0]/4] <= Wdata;
-              artificialDelayData[0] = Wdata;
-            end 
-            else if(memR) begin
-              artificialDelayData[0] <= memory[addr[9:0]/4];  
-            end
-          artificialDelayID[0] = ldstID;
-          artificialDelayReady[0] = 1;
-          end
-        end  
  endmodule
  
  
