@@ -386,10 +386,16 @@ module preg_file(rst, rw, X, Y, Z, Pset, Pid, Pz, Px, Py, Pval);
   
   always @ (*) begin
     if (rst) begin
+      /*
       for(i=0; i<4; i=i+1) begin
         pregs[i] <= 0;
       end
-    end else begin 
+      */
+      pregs[0] <= 1;
+      pregs[1] <= 1;
+      pregs[2] <= 0;
+      pregs[3] <= 0;
+    end else begin
       if(rw == 1)
         pregs[Z] <= Pz;
     end
@@ -416,7 +422,7 @@ module greg_file(rst, rw, X, Y, Z, Rz, Rx, Ry);
   always @ (*) begin
     if (rst) begin
       for(i=0; i<16; i=i+1) begin
-        gregs[i] <= 0;
+        gregs[i] <= i;
       end
     end else begin 
       if(rw == 1)

@@ -1,7 +1,7 @@
 module FE_Stage(clk,rst,ctr,n_pc,isn);
   input clk,rst;
   input [1:0] ctr; // if this is 10 then stall.
-  output reg [31:0] n_pc;
+  output [31:0] n_pc;
   output [31:0] isn;
   reg[31:0] pc;
   
@@ -11,15 +11,16 @@ module FE_Stage(clk,rst,ctr,n_pc,isn);
   
   always @(posedge clk) begin
 	 if(rst == 1) begin
-		pc = 0;
+		pc <= 0;
 	 end 
 	 else if(ctr !=  2'b10) begin
-      pc = pc + 4;
-      n_pc = pc;
+      pc <= pc + 4;
     end
     
     
   end
+  
+  assign n_pc = pc;
   
   
   
