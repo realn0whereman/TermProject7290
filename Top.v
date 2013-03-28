@@ -67,9 +67,13 @@ module pipeline(clk, rst);
   //Memory Stage + MEM/WB Latch:
   //Note: ready_out,empty_out,stall_out signals not in use yet
   wire ready_out_M,stall_out_M,empty_out_M;
-  /*LoadStoreQueue mem(.clk(clk),.rst(rst),.stall(stall),.Z_in(Z_mm),.alu_in(ResI_mm),.alu_p_in(ResP_mm),.alu_f_in(ResF_mm),
+  /*
+  //this comment changed by phil
+  MEM_Stage mem(.clk(clk),.rst(rst),.stall(stall),.Z_in(Z_mm),.alu_in(ResI_mm),.alu_p_in(ResP_mm),.alu_f_in(ResF_mm),
   .wdata_in(Wdata_mm),.cntrl_m_in(MEM_mm),.cntrl_w_in(WB_mm),.alu_out(ResI_mm),.mem_out(Rdata_mm),.Z_out(Z_mm),
-  .cntrl_w_out(WB_mm),.ready_out(ready_out_M),.empty_out(empty_out_M),.stall_out(stall_out_M));*/
+  .cntrl_w_out(WB_mm),.ready_out(ready_out_M),.empty_out(empty_out_M),.stall_out(stall_out_M));
+  LatchN preg_mmwb(.rst(rst), .clk(clk), .ctr(ctrl_mmwb), .data_in({Z_mm, ResI_mm, Rdata_mm, WB_mm[2], WB_mm[0]}),
+    .data_out({Z_wb, ResI_wb, Rdata_wb, WB_wb}));*/
   data_cache mem(.clk(clk), .MEM(MEM_mm), .Wdata(Wdata_mm), .Addr(ResI_mm), .Rdata(Rdata_mm));
 
   LatchN preg_mmwb(.rst(rst), .clk(clk), .ctr(ctrl_mmwb), .data_in({Z_mm, ResI_mm, Rdata_mm, WB_mm[2], WB_mm[0]}), 

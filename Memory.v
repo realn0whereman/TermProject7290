@@ -196,6 +196,73 @@ module ICache4KB(clk,rst,addr_in,data_out);
         end
  endmodule
  
+ module DCache4KBNew(clk,rst,addr_in, data_in, rw_in, id_in, valid_in, data_out, id_out, ready_out, stall_out);
+
+input [31:0] addr_in, data_in;
+input clk,rst,rw_in, valid_in; // r/w, valid input on the addr, data buses
+input [3:0] id_in; // ld/st Q id for request
+output reg [31:0] data_out;
+output reg [3:0] id_out; // ld/st Q id for request being satisfied
+output reg ready_out; // the oldest memory request data is ready
+output stall_out; // the memory system cannot accept anymore requests
+// stall the pipeline when this line is high
+
+  reg[31:0] memory[1023:0];
+        
+  //buffers to introduc 2 cycle delay
+  reg[3:0] artificialDelayID[1:0];
+  reg[31:0] artificialDelayData[1:0];
+  reg       artificialDelayReady[1:0];
+        
+  //initialize all state
+  integer i;
+        
+        
+        
+  always @(posedge clk) begin
+			if(rst == 1) begin
+				 for(i=0;i<1024;i=i+1) begin
+					memory[i] <= 0;
+			   end
+			artificialDelayData[0] = 0; 
+			artificialDelayData[1] = 0; 
+			artificialDelayID[0] = 0; 
+			artificialDelayID[1] = 0;
+			artificialDelayReady[0] = 0;
+			artificialDelayReady[1] = 0;
+			
+			end else begin
+			//perform a "shift" on all the state arrays
+      //this simulates a multi cycle (2 in this case) 
+			 data_out = artificialDelayData[1];
+			 id_out = artificialDelayID[1];
+			 ready_out = artificialDelayReady[1];
+				 
+			 artificialDelayData[1] = artificialDelayData[0];
+			 artificialDelayID[1] = artificialDelayID[0];
+			 artificialDelayReady[1] = artificialDelayReady[0];
+				 
+			 artificialDelayData[0] = 0;
+			 artificialDelayID[0] = 0;
+			 artificialDelayReady[0] = 0;
+				 
+			 //if LD or ST is fed into the memory, complete it and buffer it
+			 if(valid_in) begin
+			    if(rw_in == 1) begin
+						memory[addr_in[9:0]/4] <= data_in;
+						artificialDelayData[0] = data_in;
+					end else begin
+						artificialDelayData[0] <= memory[addr_in[9:0]/4];  
+					end
+					artificialDelayID[0] = id_in;
+					artificialDelayReady[0] = 1;
+				  end
+			 end
+  end
+
+endmodule
+ 
+ 
  module DCache4KB(clk,rst,memR,memW,ldstID,addr,Wdata,Rdata,ldstID_out,ready_out);
         input clk,rst,memR,memW;
         input[31:0] addr,Wdata;
