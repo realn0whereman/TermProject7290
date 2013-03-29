@@ -130,22 +130,29 @@ endmodule
 //Behavior: Every time a latency input is drive, stall will be high
 // for that many cycles, and then read in a new latency once it has stalled 
 //(the original) latency amount of times.
-module stall_counter(clk,latency,stall);
-  input clk;
+module stall_counter(clk,rst,latency,stall);
+  input clk,rst;
   input [3:0] latency;
   output reg stall;
   
   reg [3:0] cyclesLeft;
-  initial begin
-    cyclesLeft = 0;
-  end
+
   
   always @(posedge clk) begin
+    if(rst == 1) begin
+      cyclesLeft = 0;
+    end
+    else 
+    if(cyclesLeft == 0) begin
+      assign cyclesLeft = latency;
+    end else begin
+      assign cyclesLeft = cyclesLeft - 1;
+    end
+    
     if(cyclesLeft == 0) begin
       stall = 0;
-      cyclesLeft = latency;
-    end else begin
-      cyclesLeft = cyclesLeft - 1;
+    end
+    else begin
       stall = 1;
     end
       
@@ -153,22 +160,21 @@ module stall_counter(clk,latency,stall);
   
 endmodule
 
-module alu_F(sel,clk, op, A, B, Z,stall);
-  input sel,clk;
+module alu_F(sel,clk,rst, op, A, B, Z,stall);
+  input sel,clk,rst;
   input [3:0] op;
   input [31:0] A;
   input [31:0] B;
   output reg [31:0] Z;
-  output reg stall;
+  output stall;
   
-  wire [31:0] addSubResult;
+  wire [31:0] addSubResult,mulResult,divResult;
   wire stallWire;
   reg [3:0] latency;
-  reg addSub; // 0 == add, 1 == sub
+  reg addSub; // 1 == add, 0 == sub
+  wire exception;
   
-  
-  
-  stall_counter stalls(.clk(clk),.latency(latency),.stall(stallWire));
+  stall_counter stalls(.clk(clk),.rst(rst),.latency(latency),.stall(stall));
   
 	FPAddSub addSubFU(
 	.add_sub(addSub),
@@ -176,29 +182,69 @@ module alu_F(sel,clk, op, A, B, Z,stall);
 	.dataa(A),
 	.datab(B),
 	.result(addSubResult));
+ 
+  FPMul mulFU(
+	.clock(clk),
+	.dataa(A),
+	.datab(B),
+	.result(mulResult));
+	
+  FPDiv divFU(
+	.clock(clk),
+	.dataa(A),
+	.datab(B),
+	.division_by_zero(exceptions),
+	.result(divResult));
+ 
 	
 	//do we need reset for multi cycle ops?
   always@(posedge clk) begin
+    if(rst) begin
+      //
+    end
+    else
     if (sel == 1'b1) begin
-      stall = stallWire;
+      //stall = stallWire;
       case(op)
-        //itof
-        //ftoi
+        4'b1000: //itof
+        begin
+      
+        end
+        4'b1001: //ftoi
+        begin
+        end
         4'b1010: //fneg
-          begin
+        begin
             Z[30:0] = A[30:0];
             Z[31] = ~A[31];  
             latency = 0;  
-          end
+        end
         4'b1011: //fadd     
-          begin
+        begin
             //maybe set Z = to x?
-            addSub = 0;
+            addSub = 1;
             latency = 7;
             Z = addSubResult;  
-          end      
+        end
+        4'b1100: //fsub
+        begin
+          addSub = 0;
+          latency = 7;
+          Z = addSubResult;
+        end
+        4'b1101: //fmul
+        begin
+          latency = 6;
+          Z = mulResult;
+        end
+        4'b1110: //fdiv          
+        begin
+          latency = 6;
+          Z = divResult;
+        end
         default:
           begin
+            latency = 0;
             Z = 'bx;
           end
       endcase
@@ -209,7 +255,7 @@ module alu_F(sel,clk, op, A, B, Z,stall);
   
 	
 	
-	
+	 
 	
 	
 	
