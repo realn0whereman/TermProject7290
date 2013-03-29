@@ -57,7 +57,7 @@ module alu_control(opcode, alu_control_signals);
           alu_control_signals[2:1] = 2'bxx;
           alu_control_signals[0] = 1'b0;
         end
-      6'h2a: //not
+      6'h2a: //notp
         begin
           alu_control_signals[17:14] = 4'b001_x;         
           alu_control_signals[13:12] = 2'b0_0;
@@ -71,7 +71,7 @@ module alu_control(opcode, alu_control_signals);
         begin
           alu_control_signals[17:14] = 4'b001_x;         
           alu_control_signals[13:12] = 2'b0_0;
-          alu_control_signals[11:5] = 7'bx_x_0101_0;
+          alu_control_signals[11:5] = 7'b0_x_0101_0;
           alu_control_signals[4:3] = 2'bx_x;
           alu_control_signals[2:1] = 2'bxx;
           alu_control_signals[0] = 1'b0;
@@ -80,7 +80,7 @@ module alu_control(opcode, alu_control_signals);
         begin
           alu_control_signals[17:14] = 4'b001_x;         
           alu_control_signals[13:12] = 2'b0_0;
-          alu_control_signals[11:5] = 7'bx_x_0110_0;
+          alu_control_signals[11:5] = 7'b0_x_0110_0;
           alu_control_signals[4:3] = 2'bx_x;
           alu_control_signals[2:1] = 2'bxx;
           alu_control_signals[0] = 1'b0;
@@ -89,7 +89,7 @@ module alu_control(opcode, alu_control_signals);
         begin
           alu_control_signals[17:14] = 4'b001_x;         
           alu_control_signals[13:12] = 2'b0_0;
-          alu_control_signals[11:5] = 7'bx_x_0111_0;
+          alu_control_signals[11:5] = 7'b0_x_0111_0;
           alu_control_signals[4:3] = 2'bx_x;
           alu_control_signals[2:1] = 2'bxx;
           alu_control_signals[0] = 1'b0;
@@ -477,7 +477,7 @@ module imm_extend(ctr, field, imm_s);
   end
 endmodule
 
-module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, Px, Py, Rx, Ry, Fx, Fy, Z, EX, MEM, WB, Pval); //jump target is computed here
+module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, Px, Py, Rx, Ry, Fx, Fy, Z, EX, MEM, WB, Pval, Y_id, X_id); //jump target is computed here
   input clk;
   input rst;
   input [31:0] pc_n;
@@ -502,6 +502,8 @@ module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, 
   output [1:0] MEM;
   output [3:0] WB;
   output Pval;
+  output [3:0] Y_id;
+  output [3:0] X_id;
   
   wire [3:0] X;
   wire [3:0] Y;
@@ -514,6 +516,8 @@ module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, 
   assign Z = inst[22:19];
   assign Pset = inst[31];
   assign Pid = inst[30:29];
+  assign Y_id = Y;
+  assign X_id = X;
   
   preg_file pregs(.rst(rst), .rw(rw[0]), .X(X[1:0]), .Y(Y[1:0]), .Z(Pz_id), .Pset(Pset), .Pid(Pid), .Pz(Pz), .Px(Px), .Py(Py), .Pval(Pval));
   greg_file gregs(.rst(rst), .rw(rw[1]), .X(X), .Y(Y), .Z(Rz_id), .Rz(Rz), .Rx(Rx), .Ry(Ry));

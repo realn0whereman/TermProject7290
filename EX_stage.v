@@ -252,17 +252,11 @@ module alu_F(sel,clk,rst, op, A, B, Z,stall);
       Z = 'bx;
     end
   end
-  
-	
-	
-	 
-	
-	
-	
+
 endmodule
 
 
-module execution(EX,clk, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, result_P, result_I, result_F, Wdata);
+module execution(EX,clk, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, p1_mux, p2_mux, r1_mux, r2_mux, f1_mux, f2_mux, pval_mm, rval_mm, rval_wb, fval_mm, result_P, result_I, result_F, Wdata);
   input [6:0] EX;
   input clk;
   input Px;
@@ -273,21 +267,70 @@ module execution(EX,clk, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, result_P, result_I
   input [31:0] Fy;
   input [31:0] pc_n;
   input [31:0] imm_s;
+  input p1_mux;
+  input p2_mux;
+  input f1_mux;
+  input f2_mux;
+  input [1:0] r1_mux;
+  input [1:0] r2_mux;
+  input pval_mm;
+  input [31:0] rval_mm;
+  input [31:0] rval_wb;
+  input [31:0] fval_mm;
   output result_P;
   output [31:0] result_I;
   output [31:0] result_F;
   output [31:0] Wdata;
 
-  wire [31:0] ALU_src1;
-  wire [31:0] ALU_src2;
+  reg PPU_src1;
+  reg PPU_src2;
+  reg [31:0] ALU_src1;
+  reg [31:0] ALU_src2;
+  //wire [31:0] FPU_src1;
+  //wire [31:0] FPU_src2;
   
-  assign ALU_src1 = (EX[6] == 0) ? Ry : pc_n;
-  assign ALU_src2 = (EX[5] == 0) ? Rx : imm_s;
+  always @(*) begin
+    case (p1_mux)
+      1'b0: PPU_src1 = Py;
+      1'b1: PPU_src1 = pval_mm;
+      default: PPU_src1 = 'bx;
+    endcase
+  end
+  
+  always @(*) begin
+    case (p2_mux)
+      1'b0: PPU_src2 = Px;
+      1'b1: PPU_src2 = pval_mm;
+      default: PPU_src2 = 'bx;
+    endcase
+  end
+  
+  always @(*) begin
+    case (r1_mux)
+      2'b00: ALU_src1 = Ry;
+      2'b01: ALU_src1 = rval_mm;
+      2'b10: ALU_src1 = rval_wb;
+      2'b11: ALU_src1 = pc_n;
+      default: ALU_src1 = 'bx;
+    endcase
+  end
+  
+  always @(*) begin
+    case (r2_mux)
+      2'b00: ALU_src2 = Rx;
+      2'b01: ALU_src2 = rval_mm;
+      2'b10: ALU_src2 = rval_wb;
+      2'b11: ALU_src2 = imm_s;
+      default: ALU_src1 = 'bx;
+    endcase
+  end
+  
   assign Wdata = Rx;
   
-  alu_P P1(.sel(!EX[0] & (!EX[4])), .op(EX[3:1]), .A(Py), .B(Px), .C(Ry), .Z(result_P));
+  alu_P P1(.sel(!EX[0] & (!EX[4])), .op(EX[3:1]), .A(PPU_src1), .B(PPU_src2), .C(ALU_src1), .Z(result_P));
   alu_I I1(.sel(EX[0]), .op(EX[4:1]), .A(ALU_src1), .B(ALU_src2), .Z(result_I));
   //alu_F F1()
   //FIXME
   assign result_F = 'bx;
+  
 endmodule
