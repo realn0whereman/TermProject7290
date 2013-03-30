@@ -1,10 +1,11 @@
 //faked
-module data_cache(clk, MEM, Wdata, Addr, Rdata);
+module data_cache(clk, MEM, Wdata, Addr, Rdata, BUSY);
   input clk;
   input [1:0] MEM;
   input [31:0] Wdata;
   input [31:0] Addr;
   output [31:0] Rdata;
+  output BUSY;
   
   reg [31:0] d_mem [0:1023];
   integer i;
@@ -17,6 +18,7 @@ module data_cache(clk, MEM, Wdata, Addr, Rdata);
       end
   end
   
+  assign BUSY = 1'b0;
   assign Rdata = (MEM[0] == 1) ? d_mem[Addr[9:0]] : 'bx;
   
   always @(posedge clk) begin
