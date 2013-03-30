@@ -1,6 +1,35 @@
 `timescale 1ns / 100ps
 
-
+module a_MEM_test();
+  reg clk,rst;
+  reg [3:0] Z_in;
+  reg [31:0] alu_in,wdata_in;
+  reg [1:0] cntrl_m_in;
+  reg [3:0] cntrl_w_in;
+  
+  wire [31:0] alu_out,mem_out;
+  wire [3:0] Z_out;
+  wire [3:0] cntrl_w_out;
+  wire stall_out;
+  
+initial begin
+  clk = 0;
+  rst = 1;
+  #2 rst = 0;
+  //cntrl_m_in = memW memR
+  #2 Z_in = 3; alu_in = 12; wdata_in = 2; cntrl_m_in = 2'b10; cntrl_w_in = 1; // ld
+  #2 Z_in = 4; alu_in = 12; wdata_in = 2; cntrl_m_in = 2'b01; cntrl_w_in = 2; // ST
+  #2 Z_in = 5; alu_in = 15; wdata_in = 2; cntrl_m_in = 2'b00; cntrl_w_in = 4; // non mop (should stall)
+end
+  
+  
+  always begin
+   #1 clk = ~clk;
+  end
+  
+  MEM_Stage mem(clk,rst,Z_in,alu_in,wdata_in,cntrl_m_in,cntrl_w_in,alu_out,mem_out,Z_out,cntrl_w_out,stall_out);
+  
+endmodule
 
 
 module a_fpu_test();

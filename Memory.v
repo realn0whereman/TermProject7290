@@ -116,11 +116,12 @@ stall_out_C,empty,full
 		 if(Qlength == 0) begin //TODO add full logic here
 			empty = 1;
 			full = 0;
+			ready_out_C = 0;
 		 end else begin
 			empty = 0;
-			if(Qlength == 16) begin
+			if(Qlength >= 16) begin
 			   full = 1;
-			end else being
+			end else begin
 			   full = 0;
 			end
 		 end
