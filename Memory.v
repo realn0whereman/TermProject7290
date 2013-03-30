@@ -22,21 +22,21 @@ addr_in_C,data_in_C,cntrl_in_C,Z_in_C, // FROM core
 addr_out_C,data_out_C,cntrl_out_C,Z_out_C,ready_out_C, // TO core
 addr_out_M,data_out_M,rw_out_M,ldstID_out_M,valid_out_M, //TO mem
 data_in_M,ldstID_in_M,stall_in_M,ready_in_M, //FROM mem
-stall_out_C,empty
+stall_out_C,empty,full
 );
   input memR,memW,rst,clk;
   input[31:0] addr_in_C,data_in_C,data_in_M;
-  input[3:0] cntrl_in_C; // TODO change to proper cntrl signal width
+  input[3:0] cntrl_in_C; 
   input[3:0] Z_in_C,ldstID_in_M;
   input stall_in_M,ready_in_M;
   output reg [31:0] addr_out_C,data_out_C,addr_out_M;
   output reg [31:0] data_out_M;
-  output reg [3:0] cntrl_out_C; // TODO change to proper cntrl signal width
+  output reg [3:0] cntrl_out_C; 
   output reg [3:0] Z_out_C,ldstID_out_M;
-  output reg stall_out_C,empty,rw_out_M,valid_out_M,ready_out_C;
+  output reg stall_out_C,empty,full,rw_out_M,valid_out_M,ready_out_C;
   
   //State maintaining parallel arrays
-  reg       valid[15:0]; //TODO may not be necessary due to FIFO nature
+  reg       valid[15:0];
   reg[31:0] addr[15:0]; 
   reg[31:0] data[15:0];
   reg[15:0] cntrl[15:0];
@@ -115,8 +115,14 @@ stall_out_C,empty
 		 
 		 if(Qlength == 0) begin //TODO add full logic here
 			empty = 1;
+			full = 0;
 		 end else begin
 			empty = 0;
+			if(Qlength == 16) begin
+			   full = 1;
+			end else being
+			   full = 0;
+			end
 		 end
 			  
 		 stall_out_C = stall_in_M;

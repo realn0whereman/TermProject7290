@@ -1,14 +1,16 @@
-module MEM_Stage(clk,rst,stall,Z_in,alu_in,alu_p_in,alu_f_in,wdata_in,cntrl_m_in,cntrl_w_in,alu_out,mem_out,Z_out,cntrl_w_out,ready_out,empty_out,stall_out);
-  input clk,rst,stall,alu_p_in;
+module MEM_Stage(clk,rst,Z_in,alu_in,wdata_in,cntrl_m_in,cntrl_w_in,alu_out,mem_out,Z_out,cntrl_w_out,stall_out);
+  input clk,rst;
   input [3:0] Z_in;
-  input [31:0] alu_in,alu_f_in,wdata_in;
+  input [31:0] alu_in,wdata_in;
   input [1:0] cntrl_m_in;
   input [3:0] cntrl_w_in;
   //Note: alu_p_in and alu_f_in are to be written back in this stage.
   output [31:0] alu_out,mem_out;
   output [3:0] Z_out;
   output [3:0] cntrl_w_out;
-  output ready_out,empty_out,stall_out;
+  output stall_out;
+  //ready_out not yet used
+  //output ready_out,empty_out,stall_out_lsq,lsqFull_out;
   
   /*
     output reg [17:0] alu_control_signals; 
@@ -23,7 +25,7 @@ module MEM_Stage(clk,rst,stall,Z_in,alu_in,alu_p_in,alu_f_in,wdata_in,cntrl_m_in
   wire [31:0] addr_out_C;
   
   //These go to the memory module from the LSQ
-  wire rw_out_M, valid_out_M;
+  wire rw_out_M, valid_out_M,stall_out_lsq;
   wire [3:0] ldstID_out_M;
   wire [31:0] addr_out_M,data_out_M;
   
@@ -38,11 +40,20 @@ module MEM_Stage(clk,rst,stall,Z_in,alu_in,alu_p_in,alu_f_in,wdata_in,cntrl_m_in
 .addr_out_C(addr_out_C),.data_out_C(mem_out),.cntrl_out_C(cntrl_w_out),.Z_out_C(Z_out),.ready_out_C(ready_out), // TO core
 .addr_out_M(addr_out_M),.data_out_M(data_out_M),.rw_out_M(rw_out_M),.ldstID_out_M(ldstID_out_M),.valid_out_M(valid_out_M), //TO mem
 .data_in_M(data_in_M),.ldstID_in_M(ldstID_in_M),.stall_in_M(stall_in_M),.ready_in_M(ready_in_M), //FROM mem
-.stall_out_C(stall_out),.empty(empty_out) // TODO implement these and ready signal
+.stall_out_C(stall_out_lsq),.empty(empty_out),.full(lsqFull_out) // TODO implement these and ready signal
 );
 
 // module DCache4KB(clk,rst,memR,memW,ldstID,addr,Wdata,Rdata,ldstID_out,ready_out);
 DCache4KB dCache(.clk(clk),.rst(rst),.memR(!rw_out_M & valid_out_M),.memW(rw_out_M & valid_out_M),.ldstID(ldstID_out_M),.addr(addr_out_M),.Wdata(data_out_M),.Rdata(data_in_M),.ldstID_out(ldstID_in_M),.ready_out(ready_in_M));
 
+always @(posedge clk) begin
+  if(!empty_out and !memR and !memW) begin
+    stall_out = 1;
+  end else if(stall_out_lsq or lsqFull) begin
+    stall_out = 1;
+  end else begin
+    stall_out = 0;
+  end
+end
   
 endmodule
