@@ -59,9 +59,10 @@ always @(posedge clk) begin
 end
 
 always @(*) begin
-  if(!empty_out && {cntrl_m_in,cntrl_w_in} == 0) begin // don't stall for nops
+  /*if(!empty_out && {cntrl_m_in,cntrl_w_in} == 0) begin // don't stall for nops
     stall_out = 0;
-  end else if(!empty_out && !cntrl_m_in[0] && !cntrl_m_in[1]) begin //if LSQ is not empty, do not allow anything but mops through.
+  end else*/
+  if(!empty_out && !cntrl_m_in[0] && !cntrl_m_in[1]) begin //if LSQ is not empty, do not allow anything but mops through.
     stall_out = 1;
   end else if(stall_out_lsq || lsqFull_out) begin // if mem or lsq stall, stall the pipeline
     stall_out = 1;
