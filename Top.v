@@ -14,7 +14,7 @@ module pipeline(clk, rst);
   wire [6:0] EX_id, EX_ex;
   wire [3:0] Z_id, Z_ex, Z_mm, Z_wb;
   wire [1:0] MEM_id, MEM_ex, MEM_mm;
-  wire [3:0] WB_id, WB_ex, WB_mm;
+  wire [3:0] WB_id, WB_ex, WB_mm, WB_mm_buf;
   wire ResP_ex, ResP_mm;
   wire [31:0] ResI_ex, ResI_mm, ResI_wb, ResI_final;
   wire [31:0] ResF_ex, ResF_mm;
@@ -46,7 +46,7 @@ module pipeline(clk, rst);
   defparam preg_ifid.N = 64;
   defparam preg_idex.N = 211;
   defparam preg_exmm.N = 108;
-  defparam preg_mmwb.N = 71;
+  defparam preg_mmwb.N = 70; //changed from 71 by phil
   
   always @(posedge clk) begin
     if (rst == 1'b1) begin
@@ -81,22 +81,23 @@ module pipeline(clk, rst);
   LatchN preg_exmm(.rst(rst), .clk(clk), .ctr(ctrl_exmm), .data_in({Z_ex, ResI_ex, ResF_ex, ResP_ex, Wdata_ex, MEM_ex, WB_ex, busy_ex}), 
     .data_out({Z_mm, ResI_mm, ResF_mm, ResP_mm, Wdata_mm, MEM_mm, WB_mm, ex_busy}));
   
-  
   //Memory Stage + MEM/WB Latch:
   //Note: ready_out,empty_out,stall_out signals not in use yet
   wire ready_out_M,stall_out_M,empty_out_M;
+  wire [31:0] alu_out_mm,mem_out_mm;
+  wire [3:0] Z_out_mm;
+  MEM_Stage mem(.clk(clk),.rst(rst),.Z_in(Z_ex),.Z_in_buf(Z_mm),.alu_in(ResI_ex),.alu_in_buf(ResI_mm),.wdata_in(Wdata_ex),.cntrl_m_in(MEM_ex),
+  .cntrl_w_in(WB_ex),.cntrl_w_in_buf(WB_mm),.alu_out(alu_out_mm),.mem_out(mem_out_mm),.Z_out(Z_out_mm),.cntrl_w_out(WB_mm_buf),.stall_out(busy_mm));
+  
+  LatchN preg_mmwb(.rst(rst), .clk(clk), .ctr(ctrl_mmwb), .data_in({Z_out_mm, alu_out_mm, mem_out_mm, WB_mm_buf[2], WB_mm_buf[0]}),
+    .data_out({Z_wb, ResI_wb, Rdata_wb, WB_wb}));
   /*
   //this comment changed by phil
-  MEM_Stage mem(.clk(clk),.rst(rst),.stall(stall),.Z_in(Z_mm),.alu_in(ResI_mm),.alu_p_in(ResP_mm),.alu_f_in(ResF_mm),
-  .wdata_in(Wdata_mm),.cntrl_m_in(MEM_mm),.cntrl_w_in(WB_mm),.alu_out(ResI_mm),.mem_out(Rdata_mm),.Z_out(Z_mm),
-  .cntrl_w_out(WB_mm),.ready_out(ready_out_M),.empty_out(empty_out_M),.stall_out(stall_out_M));
-  LatchN preg_mmwb(.rst(rst), .clk(clk), .ctr(ctrl_mmwb), .data_in({Z_mm, ResI_mm, Rdata_mm, WB_mm[2], WB_mm[0]}),
-    .data_out({Z_wb, ResI_wb, Rdata_wb, WB_wb}));*/
   data_cache mem(.clk(clk), .MEM(MEM_mm), .Wdata(Wdata_mm), .Addr(ResI_mm), .Rdata(Rdata_mm), .BUSY(busy_mm));
 
   LatchN preg_mmwb(.rst(rst), .clk(clk), .ctr(ctrl_mmwb), .data_in({Z_mm, ResI_mm, Rdata_mm, WB_mm[2], WB_mm[0], busy_mm}), 
     .data_out({Z_wb, ResI_wb, Rdata_wb, WB_wb, mm_busy}));
-  
+  */
   writeback  wrb(.WB(WB_wb[0]), .mem_data(Rdata_wb), .reg_data(ResI_wb), .result(ResI_final));  
   
   

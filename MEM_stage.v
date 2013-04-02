@@ -1,9 +1,9 @@
-module MEM_Stage(clk,rst,Z_in,alu_in,wdata_in,cntrl_m_in,cntrl_w_in,alu_out,mem_out,Z_out,cntrl_w_out,stall_out);
+module MEM_Stage(clk,rst,Z_in,Z_in_buf,alu_in,alu_in_buf,wdata_in,cntrl_m_in,cntrl_w_in,cntrl_w_in_buf,alu_out,mem_out,Z_out,cntrl_w_out,stall_out);
   input clk,rst;
-  input [3:0] Z_in;
-  input [31:0] alu_in,wdata_in;
+  input [3:0] Z_in,Z_in_buf;
+  input [31:0] alu_in,alu_in_buf,wdata_in;
   input [1:0] cntrl_m_in;
-  input [3:0] cntrl_w_in;
+  input [3:0] cntrl_w_in,cntrl_w_in_buf;
   output reg [31:0] alu_out;
   output [31:0] mem_out;
   output reg [3:0] Z_out;
@@ -37,6 +37,8 @@ module MEM_Stage(clk,rst,Z_in,alu_in,wdata_in,cntrl_m_in,cntrl_w_in,alu_out,mem_
   wire [3:0] Z_out_wire;
   wire [3:0] cntrl_w_out_wire;
   
+  wire empty_out;
+  
   //stalls
   wire stall_in_M;
  LoadStoreQueue lsq(.rst(rst),.clk(clk),.memR(cntrl_m_in[0]),.memW(cntrl_m_in[1]),
@@ -46,11 +48,17 @@ module MEM_Stage(clk,rst,Z_in,alu_in,wdata_in,cntrl_m_in,cntrl_w_in,alu_out,mem_
 .data_in_M(data_in_M),.ldstID_in_M(ldstID_in_M),.stall_in_M(stall_in_M),.ready_in_M(ready_in_M), //FROM mem
 .stall_out_C(stall_out_lsq),.empty(empty_out),.full(lsqFull_out) // TODO implement these and ready signal
 );
-
+reg [1:0] Mem_Buf;
 // module DCache4KB(clk,rst,memR,memW,ldstID,addr,Wdata,Rdata,ldstID_out,ready_out);
 DCache4KB dCache(.clk(clk),.rst(rst),.memR(!rw_out_M & valid_out_M),.memW(rw_out_M & valid_out_M),.ldstID(ldstID_out_M),.addr(addr_out_M),.Wdata(data_out_M),.Rdata(data_in_M),.ldstID_out(ldstID_in_M),.ready_out(ready_in_M));
 
 always @(posedge clk) begin
+  if (stall_out  == 1'b0) begin
+    Mem_Buf <= cntrl_m_in;
+  end
+end
+
+always @(*) begin
   if(!empty_out && !cntrl_m_in[0] && !cntrl_m_in[1]) begin //if LSQ is not empty, do not allow anything but mops through.
     stall_out = 1;
   end else if(stall_out_lsq || lsqFull_out) begin // if mem or lsq stall, stall the pipeline
@@ -59,19 +67,20 @@ always @(posedge clk) begin
     stall_out = 0;
   end
   
-  if(!ready_out && !empty_out) begin // set ctrl_w to zero if lsq has stuff by default to avoid side effects
-    cntrl_w_out = 0;
-  end
-  if(empty_out && cntrl_m_in == 0) begin // non mop pass through
-    Z_out = Z_in;
-    alu_out = alu_in;
-    cntrl_w_out = cntrl_w_in;
-  end
-  if(ready_out) begin
+  
+  if(empty_out && Mem_Buf == 2'b00) begin // non mop pass through
+    Z_out = Z_in_buf;
+    alu_out = alu_in_buf;
+    cntrl_w_out = cntrl_w_in_buf;
+  end else if(ready_out) begin
     cntrl_w_out = cntrl_w_out_wire;
     Z_out = Z_out_wire;
-  
- end
+    alu_out = 0;
+  end else begin
+    Z_out = 0;
+    alu_out = 0;
+    cntrl_w_out = 0;
+  end
 end
   
 endmodule
