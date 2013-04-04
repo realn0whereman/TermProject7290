@@ -130,39 +130,54 @@ endmodule
 //Behavior: Every time a latency input is drive, stall will be high
 // for that many cycles, and then read in a new latency once it has stalled 
 //(the original) latency amount of times.
-module stall_counter(clk,rst,latency,stall);
-  input clk,rst;
+module stall_counter(clk,sel,rst,latency,stall);
+  input clk,rst,sel;
   input [3:0] latency;
-  output reg stall;
+  output stall;
   
+  reg [2:0] state;
   reg [3:0] cyclesLeft;
-
+  
+  parameter init = 3'b000, Stall1 = 3'b001, Stall2 = 3'b010, Stall3 = 3'b011, Stall4 = 3'b100, 
+    Stall5 = 3'b101, Stall6 = 3'b110, Stall7 = 3'b111;
+  
+  initial begin
+    state <= init;
+  end
+  
   
   always @(posedge clk) begin
-    if(rst == 1) begin
-      cyclesLeft = 0;
-    end
-    else 
-    if(cyclesLeft == 0) begin
-      assign cyclesLeft = latency;
-    end else begin
-      assign cyclesLeft = cyclesLeft - 1;
-    end
-    
-    if(cyclesLeft == 0) begin
-      stall = 0;
-    end
-    else begin
-      stall = 1;
-    end
-      
-  end
+    case(state)
+        init:
+          begin
+            if(latency == 7) begin
+              state <= Stall7; 
+            end else if(latency == 6) begin
+              state <= Stall6;
+            end else if(latency == 5) begin
+              state <= Stall5;
+            end
+          end
+        Stall7: state <= Stall6;
+        Stall6: state <= Stall5;
+        Stall5: state <= Stall4;
+        Stall4: state <= Stall3;
+        Stall3: state <= Stall2;
+        Stall2: state <= Stall1;
+        Stall1: state <= init;
+    endcase    
+  end  
+  
+  assign stall = (state != init) || ((state == init) && sel);
+  
+  
+  
   
 endmodule
 
 module alu_F(sel,clk,rst, op, A, B, Z,stall);
   input sel,clk,rst;
-  input [3:0] op;
+  input [2:0] op;
   input [31:0] A;
   input [31:0] B;
   output reg [31:0] Z;
@@ -174,7 +189,7 @@ module alu_F(sel,clk,rst, op, A, B, Z,stall);
   reg addSub; // 1 == add, 0 == sub
   wire exception;
   
-  stall_counter stalls(.clk(clk),.rst(rst),.latency(latency),.stall(stall));
+  stall_counter stalls(.clk(clk),.sel(sel),.rst(rst),.latency(latency),.stall(stall));
   
 	FPAddSub addSubFU(
 	.add_sub(addSub),
@@ -182,7 +197,7 @@ module alu_F(sel,clk,rst, op, A, B, Z,stall);
 	.dataa(A),
 	.datab(B),
 	.result(addSubResult));
- 
+      
   FPMul mulFU(
 	.clock(clk),
 	.dataa(A),
@@ -198,7 +213,7 @@ module alu_F(sel,clk,rst, op, A, B, Z,stall);
  
 	
 	//do we need reset for multi cycle ops?
-  always@(posedge clk) begin
+  always@(*) begin
     if(rst) begin
       //
     end
@@ -206,38 +221,38 @@ module alu_F(sel,clk,rst, op, A, B, Z,stall);
     if (sel == 1'b1) begin
       //stall = stallWire;
       case(op)
-        4'b1000: //itof
+        3'b000: //itof
         begin
       
         end
-        4'b1001: //ftoi
+        3'b001: //ftoi
         begin
         end
-        4'b1010: //fneg
+        3'b010: //fneg
         begin
             Z[30:0] = A[30:0];
             Z[31] = ~A[31];  
             latency = 0;  
         end
-        4'b1011: //fadd     
+        3'b011: //fadd     
         begin
             //maybe set Z = to x?
             addSub = 1;
             latency = 7;
             Z = addSubResult;  
         end
-        4'b1100: //fsub
+        3'b100: //fsub
         begin
           addSub = 0;
           latency = 7;
           Z = addSubResult;
         end
-        4'b1101: //fmul
+        3'b101: //fmul
         begin
-          latency = 6;
+          latency = 5;
           Z = mulResult;
         end
-        4'b1110: //fdiv          
+        3'b110: //fdiv          
         begin
           latency = 6;
           Z = divResult;
@@ -256,9 +271,9 @@ module alu_F(sel,clk,rst, op, A, B, Z,stall);
 endmodule
 
 
-module execution(EX,clk, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, p1_mux, p2_mux, r1_mux, r2_mux, f1_mux, f2_mux, pval_mm, rval_mm, rval_wb, fval_mm, result_P, result_I, result_F, Wdata, BUSY);
+module execution(EX,clk,rst, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, p1_mux, p2_mux, r1_mux, r2_mux, f1_mux, f2_mux, pval_mm, rval_mm, rval_wb, fval_mm, result_P, result_I, result_F, Wdata, BUSY);
   input [6:0] EX;
-  input clk;
+  input clk,rst;
   input Px;
   input Py;
   input [31:0] Rx;
@@ -287,8 +302,8 @@ module execution(EX,clk, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, p1_mux, p2_mux, r1
   reg PPU_src2;
   reg [31:0] ALU_src1;
   reg [31:0] ALU_src2;
-  //wire [31:0] FPU_src1;
-  //wire [31:0] FPU_src2;
+  reg [31:0] FPU_src1;
+  reg [31:0] FPU_src2;
   
   always @(*) begin
     case (p1_mux)
@@ -322,7 +337,27 @@ module execution(EX,clk, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, p1_mux, p2_mux, r1
       2'b01: ALU_src2 = rval_mm;
       2'b10: ALU_src2 = rval_wb;
       2'b11: ALU_src2 = imm_s;
-      default: ALU_src1 = 'bx;
+      default: ALU_src2 = 'bx;
+    endcase
+  end
+  
+  always @(*) begin
+    case (f1_mux)
+      2'b00: FPU_src1 = Fx; //TODO FIXME
+      2'b01: FPU_src1 = Fx;
+      2'b10: FPU_src1 = Fx;
+      2'b11: FPU_src1 = Fx;
+      default: FPU_src1 = 'bx;
+    endcase
+  end
+  
+  always @(*) begin
+    case (f2_mux)
+      2'b00: FPU_src2 = Fy; //TODO FIXME
+      2'b01: FPU_src2 = Fy;
+      2'b10: FPU_src2 = Fy;
+      2'b11: FPU_src2 = Fy;
+      default: FPU_src2 = 'bx;
     endcase
   end
   
@@ -331,8 +366,9 @@ module execution(EX,clk, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, p1_mux, p2_mux, r1
   
   alu_P P1(.sel(!EX[0] & (!EX[4])), .op(EX[3:1]), .A(PPU_src1), .B(PPU_src2), .C(ALU_src1), .Z(result_P));
   alu_I I1(.sel(EX[0]), .op(EX[4:1]), .A(ALU_src1), .B(ALU_src2), .Z(result_I));
-  //alu_F F1()
+  alu_F F1(.sel(!EX[0] & EX[4]),.clk(clk),.rst(rst), .op(EX[3:1]), .A(FPU_src1), .B(FPU_src2), .Z(result_F),.stall(BUSY));
+
   //FIXME
-  assign result_F = 'bx;
+  //assign result_F = 'bx;
   
 endmodule

@@ -37,6 +37,7 @@ stall_out_C,empty,full
   
   //State maintaining parallel arrays
   reg       valid[15:0];
+  reg       rw[15:0];
   reg[31:0] addr[15:0]; 
   reg[31:0] data[15:0];
   reg[15:0] cntrl[15:0];
@@ -48,7 +49,7 @@ stall_out_C,empty,full
   
 
   integer i;
-    
+  reg found;
   integer id;
   always @(posedge clk) begin
     
@@ -60,6 +61,7 @@ stall_out_C,empty,full
 			cntrl[i] = 0;
 			Z[i] = 0;
 			valid[i] = 0;
+			rw[i] = 0;
       
 		end
 		QtailIdx=0;
@@ -74,20 +76,45 @@ stall_out_C,empty,full
 			data[id] = data_in_C;
 			cntrl[id] = cntrl_in_C;
 			Z[id] = Z_in_C;
+			rw[id] = memW;
 			
-			//send request to mem 
-			addr_out_M = addr_in_C;
-			data_out_M = data_in_C;
-			if(memW) begin
-			  rw_out_M = 1;
-			  
-			end else begin
-			  rw_out_M = 0;
+			//LD/ST forwarding
+			
+			found = 0;
+			for(i=0;i<16;i=i+1) begin
+					if(addr[i] == addr[id]) begin
+					  found = 1;
+					  if(memR)begin // current op is ld
+					   if(rw[i] == 1) begin // older op is st
+					     data[id] = data[i];
+					     valid[id] = valid[i];
+					   end else if (rw[i] == 0 && valid[i] == 1) begin // older op is ld
+					     data[id] = data[i];
+					   end
+					  end else if(memW) begin // current op is st
+					   if(rw[i] == 0) begin // older op is ld
+					     //?
+					   end
+					  end
+					end 
 			end
-			valid_out_M = 1;
-			ldstID_out_M = id;
 			
-			Qlength = Qlength + 1;
+			if(!found) begin
+    			 //send request to mem 
+    			addr_out_M = addr_in_C;
+    			data_out_M = data_in_C;
+    			if(memW) begin
+    			  rw_out_M = 1;
+    			  
+    			end else begin
+    			  rw_out_M = 0;
+    			end
+    			valid_out_M = 1;
+    			ldstID_out_M = id;
+    			
+    			Qlength = Qlength + 1;
+			end
+			
 		 end else begin
 			valid_out_M = 0;  
 		 end
@@ -164,13 +191,18 @@ module ICache4KB(clk,rst,addr_in,data_out);
     //i_mem[0] = 32'b0_00_010100_0001_0011_000000000000111; //addi r1, r3, 12
     //i_mem[0] = 32'b0_00_100011_0110_0000_000000000001000; //ld r6, r0, 4
     //i_mem[1] = 32'b0_00_100100_0111_0000_000000000001000; //st r7, r0, 8
-    i_mem[0] = 32'b0_00_100011_0000_0000_000000000001000; //ld r6, r0, 8
-    i_mem[1] = 32'b0;
-    i_mem[2] = 32'b0_00_010100_0001_0011_000000000000111;
-    i_mem[3] = 32'b0;
-    i_mem[4] = 32'b0;
-    i_mem[5] = 32'b0;
-    i_mem[6] = 32'b0;
+    //i_mem[0] = 32'b0_00_110101_0000_0001_000000000000000; //fadd f0, f1
+    
+    i_mem[0] = 32'b0_00_100100_0100_0000_000000000000100; //st r4, r0, 4
+    i_mem[1] = 32'b0_00_100011_0110_0000_000000000000100; //ld r6, r0, 4
+    
+    /*i_mem[1] = 32'b0_00_110101_0000_0001_000000000000000;
+    i_mem[2] = 32'b0_00_110101_0000_0001_000000000000000;
+    i_mem[3] = 32'b0_00_110101_0000_0001_000000000000000;
+    i_mem[4] = 32'b0_00_110101_0000_0001_000000000000000;
+    i_mem[5] = 32'b0_00_110101_0000_0001_000000000000000;
+    i_mem[6] = 32'b0_00_110101_0000_0001_000000000000000;
+    i_mem[7] = 32'b0_00_110101_0000_0001_000000000000000;*/
     //i_mem[1] = 32'b0_00_100011_0001_0000_000000000001000; //ld r6, r0, 4
     
     //i_mem[2] = 32'b0_00_010100_0001_0011_000000000000111; //addi r1, r3, 12
@@ -312,7 +344,7 @@ endmodule
         
         
         
-        always @(posedge clk or posedge rst) begin
+        always @(posedge clk) begin
 			if(rst == 1) begin
 				 for(i=0;i<1024;i=i+1) begin
 					memory[i] <= 0;
