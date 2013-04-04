@@ -15,11 +15,17 @@ module a_MEM_test();
 initial begin
   clk = 0;
   rst = 1;
-  #2 rst = 0;
+  #1 rst = 0;
   //cntrl_m_in = memW memR
-  #2 Z_in = 3; alu_in = 12; wdata_in = 2; cntrl_m_in = 2'b10; cntrl_w_in = 1; // ld
-  #2 Z_in = 4; alu_in = 12; wdata_in = 2; cntrl_m_in = 2'b01; cntrl_w_in = 2; // ST
-  #2 Z_in = 5; alu_in = 15; wdata_in = 2; cntrl_m_in = 2'b00; cntrl_w_in = 4; // non mop (should stall)
+  #3 Z_in = 3; alu_in = 12; wdata_in = 2; cntrl_m_in = 2'b10; cntrl_w_in = 1; // ld
+  #2 Z_in = 0; alu_in = 0; wdata_in = 0; cntrl_m_in = 0; cntrl_w_in = 0; //nop
+  //#2 Z_in = 4; alu_in = 12; wdata_in = 2; cntrl_m_in = 2'b01; cntrl_w_in = 2; // ST
+  //#2 Z_in = 6; alu_in = 12; wdata_in = 2; cntrl_m_in = 2'b01; cntrl_w_in = 2; // ST
+  //#2 Z_in = 5; alu_in = 15; wdata_in = 2; cntrl_m_in = 2'b00; cntrl_w_in = 4; // non mop (should stall)
+  //#2 Z_in = 9; alu_in = 15; wdata_in = 2; cntrl_m_in = 2'b00; cntrl_w_in = 4; // non mop (should stall)
+  //#12 Z_in = 3; alu_in = 12; wdata_in = 2; cntrl_m_in = 2'b10; cntrl_w_in = 1; // ld
+  //#2 Z_in = 4; alu_in = 12; wdata_in = 2; cntrl_m_in = 2'b01; cntrl_w_in = 2; // ST
+  //#2 Z_in = 6; alu_in = 12; wdata_in = 2; cntrl_m_in = 2'b01; cntrl_w_in = 2; // ST
 end
   
   

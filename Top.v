@@ -47,6 +47,7 @@ module pipeline(clk, rst);
   defparam preg_idex.N = 219;
   defparam preg_exmm.N = 107;
   defparam preg_mmwb.N = 70;
+
   
   always @(posedge clk) begin
     if (rst == 1'b1) begin
@@ -78,6 +79,7 @@ module pipeline(clk, rst);
    execution exe(.EX(EX_ex), .clk(clk), .Px(Px_ex), .Py(Py_ex), .Rx(Rx_ex), .Ry(Ry_ex), .Fx(Fx_ex), .Fy(Fy_ex), .imm_s(imm_ex), .pc_n(pc_n_ex), 
     .result_P(ResP_ex), .result_I(ResI_ex), .result_F(ResF_ex), .Wdata(Wdata_ex), .p1_mux(p1_mux), .p2_mux(p2_mux), .r1_mux(r1_mux), .r2_mux(r2_mux),
     .f1_mux(f1_mux), .f2_mux(f2_mux), .pval_mm(ResP_mm), .rval_mm(ResI_mm), .rval_wb(ResI_final), .fval_mm(ResF_mm), .BUSY(busy_ex));
+    
   LatchN preg_exmm(.rst(rst), .clk(clk), .ctr(ctrl_exmm), .data_in({Z_ex, ResI_ex, ResF_ex, ResP_ex, Wdata_ex, MEM_ex, WB_ex}), 
     .data_out({Z_mm, ResI_mm, ResF_mm, ResP_mm, Wdata_mm, MEM_mm, WB_mm}));
   
@@ -88,7 +90,7 @@ module pipeline(clk, rst);
 
   LatchN preg_mmwb(.rst(rst), .clk(clk), .ctr(ctrl_mmwb), .data_in({Z_mm_buf, ResI_mm_buf, Rdata_mm, WB_mm_buf[2], WB_mm_buf[0]}), 
     .data_out({Z_wb, ResI_wb, Rdata_wb, WB_wb}));
-  
+
   writeback  wrb(.WB(WB_wb[0]), .mem_data(Rdata_wb), .reg_data(ResI_wb), .result(ResI_final));  
   
   
