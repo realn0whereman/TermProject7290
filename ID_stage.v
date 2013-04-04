@@ -1,18 +1,19 @@
 module alu_control(opcode, alu_control_signals);
   input [5:0] opcode; 
-  output reg [17:0] alu_control_signals; 
+  output reg [19:0] alu_control_signals; 
   //     0 : Reg ID sel
   //   2:1 : sign extension
   //   4:3 : jump signal (reserved); 3: is jump, 4: r/i
   //  11:5 : EX; 5: PF or I, 6:9: AluOP, 10: Src2 sel, 11: link?
   // 13:12 : MEM; 12: MemR, 13: MemW
   // 17:14 : WB; 14: RegMem, 15: rw_P, 16: rw_R, 17: rw_F 
-  
+  // 19:18 : opc_type: 0: contains Ry ?, 1: contains Rx ?
   always @(*) begin
     case(opcode)
       //5.3 Memory Loads/Stores
       6'h23: //ld
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b010_1;         
           alu_control_signals[13:12] = 2'b0_1;
           alu_control_signals[11:5] = 7'b0_1_0001_1;
@@ -22,6 +23,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h24: //st
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b000_x;         
           alu_control_signals[13:12] = 2'b1_0;
           alu_control_signals[11:5] = 7'b0_1_0001_1;
@@ -32,6 +34,7 @@ module alu_control(opcode, alu_control_signals);
       //5.4 Predicate Manipulation        
       6'h27: //andp
         begin
+          alu_control_signals[19:18] = 2'b00;
           alu_control_signals[17:14] = 4'b001_x;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'bx_x_0001_0;
@@ -41,6 +44,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h28: //orp
         begin
+          alu_control_signals[19:18] = 2'b00;
           alu_control_signals[17:14] = 4'b001_x;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'bx_x_0010_0;
@@ -50,6 +54,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h29: //xorp
         begin
+          alu_control_signals[19:18] = 2'b00;
           alu_control_signals[17:14] = 4'b001_x;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'bx_x_0011_0;
@@ -59,6 +64,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h2a: //notp
         begin
+          alu_control_signals[19:18] = 2'b00;
           alu_control_signals[17:14] = 4'b001_x;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'bx_x_0100_0;
@@ -69,6 +75,7 @@ module alu_control(opcode, alu_control_signals);
       //5.5 Value Test        
       6'h26: //rtop
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b001_x;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_x_0101_0;
@@ -78,6 +85,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h2b: //isneg
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b001_x;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_x_0110_0;
@@ -87,6 +95,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h2c: //iszero
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b001_x;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_x_0111_0;
@@ -97,6 +106,7 @@ module alu_control(opcode, alu_control_signals);
       //5.6 Immediate Integer Arithmetic/Logic        
       6'h25: //ldi
         begin
+          alu_control_signals[19:18] = 2'b00;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'bx_1_1101_1;
@@ -106,6 +116,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h14: //add
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_1_0001_1;
@@ -115,6 +126,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h15: //subi
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_1_0010_1;
@@ -124,6 +136,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h16: //muli
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_1_0011_1;
@@ -133,6 +146,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h17: //divi
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_1_0100_1;
@@ -142,6 +156,7 @@ module alu_control(opcode, alu_control_signals);
         end        
       6'h18: //modi
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_1_0101_1;
@@ -151,6 +166,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h19: //shli
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_1_0110_1;
@@ -160,6 +176,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h1a: //shri
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_1_0111_1;
@@ -169,6 +186,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h11: //andi
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_1_1000_1;
@@ -178,6 +196,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h12: //ori
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_1_1001_1;
@@ -187,6 +206,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h13: //xori
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_1_1010_1;
@@ -197,6 +217,7 @@ module alu_control(opcode, alu_control_signals);
       //5.7 Register Integer Arithmetic/Logic        
       6'h0a: //add
         begin
+          alu_control_signals[19:18] = 2'b11;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_0001_1;
@@ -206,6 +227,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h0b: //sub
         begin
+          alu_control_signals[19:18] = 2'b11;
           alu_control_signals[17:14] = 4'b010_0;        
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_0010_1;
@@ -215,6 +237,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h0c: //mul
         begin
+          alu_control_signals[19:18] = 2'b11;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_0011_1;
@@ -224,6 +247,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h0d: //div
         begin
+          alu_control_signals[19:18] = 2'b11;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_0100_1;
@@ -233,6 +257,7 @@ module alu_control(opcode, alu_control_signals);
         end        
       6'h0e: //mod
         begin
+          alu_control_signals[19:18] = 2'b11;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_0101_1;
@@ -242,6 +267,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h0f: //shl
         begin
+          alu_control_signals[19:18] = 2'b11;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_0110_1;
@@ -251,6 +277,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h10: //shr
         begin
+          alu_control_signals[19:18] = 2'b11;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_0111_1;
@@ -260,6 +287,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h07: //and
         begin
+          alu_control_signals[19:18] = 2'b11;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_1000_1;
@@ -269,6 +297,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h08: //or
         begin
+          alu_control_signals[19:18] = 2'b11;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_1001_1;
@@ -278,6 +307,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h09: //xor
         begin
+          alu_control_signals[19:18] = 2'b11;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_1010_1;
@@ -287,6 +317,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h05: //neg
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_x_1011_1;
@@ -296,6 +327,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h06: //not
         begin
+          alu_control_signals[19:18] = 2'b01;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_x_1100_1;
@@ -309,6 +341,7 @@ module alu_control(opcode, alu_control_signals);
       //ftoi 1001
       6'h39: //fneg
         begin
+          alu_control_signals[19:18] = 2'b00;
           alu_control_signals[17:14] = 4'b100_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_1010_0;
@@ -318,6 +351,7 @@ module alu_control(opcode, alu_control_signals);
         end 
       6'h35: //fadd
         begin
+          alu_control_signals[19:18] = 2'b00;
           alu_control_signals[17:14] = 4'b100_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_1011_0;
@@ -327,6 +361,7 @@ module alu_control(opcode, alu_control_signals);
         end 
       6'h36: //fsub
         begin
+          alu_control_signals[19:18] = 2'b00;
           alu_control_signals[17:14] = 4'b100_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_1100_0;
@@ -336,6 +371,7 @@ module alu_control(opcode, alu_control_signals);
         end 
       6'h37: //fmul
         begin
+          alu_control_signals[19:18] = 2'b00;
           alu_control_signals[17:14] = 4'b100_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_1101_0;
@@ -345,6 +381,7 @@ module alu_control(opcode, alu_control_signals);
         end 
       6'h38: //fdiv
         begin
+          alu_control_signals[19:18] = 2'b00;
           alu_control_signals[17:14] = 4'b100_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_1110_0;
@@ -355,6 +392,7 @@ module alu_control(opcode, alu_control_signals);
       //5.9 Control Flow
       6'h1d: //jmpi
         begin
+          alu_control_signals[19:18] = 2'b00;
           alu_control_signals[17:14] = 4'b000_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_0000_0;
@@ -364,6 +402,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h1e: //jmpr
         begin
+          alu_control_signals[19:18] = 2'b10;
           alu_control_signals[17:14] = 4'b000_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b0_0_0000_0;
@@ -373,6 +412,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h1b: //jali
         begin
+          alu_control_signals[19:18] = 2'b00;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b1_0_1110_1;
@@ -382,6 +422,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h1c: //jalr
         begin
+          alu_control_signals[19:18] = 2'b10;
           alu_control_signals[17:14] = 4'b010_0;         
           alu_control_signals[13:12] = 2'b0_0;
           alu_control_signals[11:5] = 7'b1_0_1110_1;
@@ -393,6 +434,7 @@ module alu_control(opcode, alu_control_signals);
         
       default: //nop
         begin
+          alu_control_signals[19:18] = 2'b00;
           alu_control_signals[17:14] = 2'b0;         
           alu_control_signals[13:12] = 2'b0;
           alu_control_signals[11:5] = 4'b0;
@@ -513,7 +555,7 @@ module imm_extend(ctr, field, imm_s);
   end
 endmodule
 
-module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, Px, Py, Rx, Ry, Fx, Fy, Z, EX, MEM, WB, JMP, Pval, Y_id, X_id, jmp_i); //jump target is computed here
+module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, Px, Py, Rx, Ry, Fx, Fy, Z, EX, MEM, WB, JMP, OPC, Pval, Y_id, X_id, jmp_i); //jump target is computed here
   input clk;
   input rst;
   input [31:0] pc_n;
@@ -538,6 +580,7 @@ module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, 
   output [1:0] MEM;
   output [3:0] WB;
   output [1:0] JMP;
+  output [1:0] OPC;
   output Pval;
   output [3:0] Y_id;
   output [3:0] X_id;
@@ -546,7 +589,7 @@ module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, 
   wire [3:0] X;
   wire [3:0] Y;
   wire [1:0] Pid;
-  wire [17:0] signals;
+  wire [19:0] signals;
   wire Pset;
   
   assign X = (signals[0] == 0) ? inst[14:11] : inst[22:19];
@@ -569,6 +612,8 @@ module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, 
   assign MEM = signals[13:12];
   assign WB = signals[17:14];
   assign JMP = signals[4:3];
+  
+  assign OPC = signals[19:18];
   
   assign jmp_i = pc_n + imm_s;
   
