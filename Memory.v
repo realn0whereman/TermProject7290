@@ -190,20 +190,27 @@ module ICache4KB(clk,rst,addr_in,data_out);
     //i_mem[0] = 32'b0_00_100101_0011_0000000000000000000; //ldi r3, 0 
     //i_mem[0] = 32'b0_00_010100_0001_0011_000000000000111; //addi r1, r3, 12
     //i_mem[0] = 32'b0_00_100011_0110_0000_000000000001000; //ld r6, r0, 4
-    //i_mem[1] = 32'b0_00_100100_0111_0000_000000000001000; //st r7, r0, 8
-    //i_mem[0] = 32'b0_00_110101_0000_0001_000000000000000; //fadd f0, f1
-    
-    i_mem[0] = 32'b0_00_100100_0100_0000_000000000000100; //st r4, r0, 4
-    i_mem[1] = 32'b0_00_100011_0110_0000_000000000000100; //ld r6, r0, 4
-    
-    /*i_mem[1] = 32'b0_00_110101_0000_0001_000000000000000;
-    i_mem[2] = 32'b0_00_110101_0000_0001_000000000000000;
-    i_mem[3] = 32'b0_00_110101_0000_0001_000000000000000;
-    i_mem[4] = 32'b0_00_110101_0000_0001_000000000000000;
-    i_mem[5] = 32'b0_00_110101_0000_0001_000000000000000;
-    i_mem[6] = 32'b0_00_110101_0000_0001_000000000000000;
-    i_mem[7] = 32'b0_00_110101_0000_0001_000000000000000;*/
+    //i_mem[1] = 32'b0_00_
+    //i_mem[0] = 32'b0_00_100011_0110_0000_000000000001000; //ld r6, r0, 8
+    //i_mem[1] = 32'b1_00_010100_0001_0110_000000000000111; //addi r1, r6, 7
+   // i_mem[0] = 32'b0_00_100100_0010_0000_000000000000100; //st r2, r0, 4
+    //i_mem[1] = 32'b0;
+    //i_mem[2] = 32'b0;
+    //i_mem[2] = 32'b0_00_010100_0001_0011_000000000000111; //jali r1, r3, #7
+
+    i_mem[0] = 32'b0_00_100011_0110_0000_000000000001000; //ld r6, r0, 8
+    i_mem[1] = 32'b0_00_010100_0101_0110_000000000000111; // addi r5, r6, 7
+    //i_mem[1] = 32'b0;
+    i_mem[2] = 32'b0;
+    i_mem[3] = 32'b0;
+    i_mem[4] = 32'b0;
+    i_mem[5] = 32'b0;
+    i_mem[6] = 32'b0;
+
+    //i_mem[1] = 32'b0_00_100011_0110_0000_000000000001000; //ld r6, r0, 4
+
     //i_mem[1] = 32'b0_00_100011_0001_0000_000000000001000; //ld r6, r0, 4
+
     
     //i_mem[2] = 32'b0_00_010100_0001_0011_000000000000111; //addi r1, r3, 12
     //i_mem[3] = 32'b0;   
@@ -296,30 +303,30 @@ output stall_out; // the memory system cannot accept anymore requests
 			end else begin
 			//perform a "shift" on all the state arrays
       //this simulates a multi cycle (2 in this case) 
-			 data_out = artificialDelayData[1];
-			 id_out = artificialDelayID[1];
-			 ready_out = artificialDelayReady[1];
+			 data_out <= artificialDelayData[1];
+			 id_out <= artificialDelayID[1];
+			 ready_out <= artificialDelayReady[1];
 				 
-			 artificialDelayData[1] = artificialDelayData[0];
-			 artificialDelayID[1] = artificialDelayID[0];
-			 artificialDelayReady[1] = artificialDelayReady[0];
-				 
-			 artificialDelayData[0] = 0;
-			 artificialDelayID[0] = 0;
-			 artificialDelayReady[0] = 0;
+			 artificialDelayData[1] <= artificialDelayData[0];
+			 artificialDelayID[1] <= artificialDelayID[0];
+			 artificialDelayReady[1] <= artificialDelayReady[0];
 				 
 			 //if LD or ST is fed into the memory, complete it and buffer it
 			 if(valid_in) begin
 			    if(rw_in == 1) begin
 						memory[addr_in[9:0]/4] <= data_in;
-						artificialDelayData[0] = data_in;
+						artificialDelayData[0] <= 0;
 					end else begin
 						artificialDelayData[0] <= memory[addr_in[9:0]/4];  
 					end
 					artificialDelayID[0] = id_in;
 					artificialDelayReady[0] = 1;
-				  end
-			 end
+			 end else begin
+			     artificialDelayData[0] <= 0;
+			     artificialDelayID[0] <= 0;
+			     artificialDelayReady[0] <= 0;
+			 end	    
+		end
   end
 
 endmodule
@@ -332,7 +339,7 @@ endmodule
         output reg [31:0] Rdata;
         output reg [3:0] ldstID_out;
         output reg ready_out;
-        reg[31:0] memory[1023:0];
+        reg[31:0] memory[0:1023];
         
         //buffers to introduc 2 cycle delay
         reg[31:0] artificialDelayID[1:0];
@@ -344,60 +351,65 @@ endmodule
         
         
         
-        always @(posedge clk) begin
+    always @(posedge clk) begin
 			if(rst == 1) begin
 				 for(i=0;i<1024;i=i+1) begin
 					memory[i] <= 0;
-				 end
-				artificialDelayData[0] = 0; 
-				artificialDelayData[1] = 0; 
-				artificialDelayID[0] = 0; 
-				artificialDelayID[1] = 0;
-				artificialDelayReady[0] = 0;
-				artificialDelayReady[1] = 0;
-			
+				end
+				
+				artificialDelayData[0] <= 0; 
+				artificialDelayData[1] <= 0; 
+				artificialDelayID[0] <= 0; 
+				artificialDelayID[1] <= 0;
+				artificialDelayReady[0] <= 0;
+				artificialDelayReady[1] <= 0;
 			end else begin
 			//perform a "shift" on all the state arrays
-        //this simulates a multi cycle (2 in this case) 
+        //this simulates a multi cycle (2 in this case)
+			  artificialDelayData[1] <= artificialDelayData[0];
+				artificialDelayID[1] <= artificialDelayID[0];
+				artificialDelayReady[1] <= artificialDelayReady[0];
+				
         if((addr[9:0]/4)%2 == 0 || (!memW && !memR)) begin
-  				 Rdata = artificialDelayData[1];
-  				 ldstID_out = artificialDelayID[1];
-  				 ready_out = artificialDelayReady[1];
+  				  Rdata <= artificialDelayData[1];
+  				  ldstID_out <= artificialDelayID[1];
+  				  ready_out <= artificialDelayReady[1];
   				 
-  				 artificialDelayData[1] = artificialDelayData[0];
-  				 artificialDelayID[1] = artificialDelayID[0];
-  				 artificialDelayReady[1] = artificialDelayReady[0];
-  				 
-  				 artificialDelayData[0] = 0;
-  				 artificialDelayID[0] = 0;
-  				 artificialDelayReady[0] = 0;
-  				 
-  				 //if LD or ST is fed into the memory, complete it and buffer it
-  				 if(memW || memR) begin
-  					if(memW) begin
-  						memory[addr[9:0]/4] <= Wdata;
-  						artificialDelayData[0] = Wdata;
-  					end 
-  					else if(memR) begin
-  						artificialDelayData[0] <= memory[addr[9:0]/4];  
-  					end
-  						artificialDelayID[0] = ldstID;
-  						artificialDelayReady[0] = 1;
-  				 end
+  				  //if LD or ST is fed into the memory, complete it and buffer it
+ 					if(memW) begin
+ 					  memory[addr[9:0]/4] <= Wdata;
+						artificialDelayData[0] <= 0;
+						artificialDelayID[0] <= ldstID;
+  						artificialDelayReady[0] <= 1;
+ 					end else if(memR) begin
+						artificialDelayData[0] <= memory[addr[9:0]/4]; 
+						artificialDelayID[0] <= ldstID;
+  						artificialDelayReady[0] <= 1; 
+ 					end else begin
+  				    artificialDelayData[0] <= 0;
+  				    artificialDelayID[0] <= 0;
+  				    artificialDelayReady[0] <= 0;    					    
+					end
+  					  
 			 end else begin// end variable latency hack (addr[9:0]/4)%2 == 0)
-		      if(memW || memR) begin
-  					 if(memW) begin
-  						  memory[addr[9:0]/4] <= Wdata;
-  						  Rdata = Wdata;
-  						  ldstID_out = ldstID;
-  						  ready_out = 1;
-  					 end else if(memR) begin
-  						  Rdata <= memory[addr[9:0]/4]; 
-  						  ldstID_out = ldstID;
-  						  ready_out = 1; 
-  					 end 
-  				 end
-		   end
+ 					if(memW) begin
+ 					  memory[addr[9:0]/4] <= Wdata;
+						ldstID_out <= ldstID;
+						ready_out <= 1;
+ 					end else if(memR) begin
+						Rdata <= memory[addr[9:0]/4]; 
+						ldstID_out <= ldstID;
+						ready_out <= 1;
+ 					end else begin
+ 					  ldstID_out <= 0;
+ 					  ready_out <= 0; 					    
+					end
+					
+					artificialDelayData[0] <= 0;
+				  artificialDelayID[0] <= 0;
+				  artificialDelayReady[0] <= 0; 
+ 			 end
+
 		end // end if rst
   end // end always
  endmodule
