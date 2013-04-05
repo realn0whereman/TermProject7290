@@ -207,7 +207,7 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
         end
         
         read_ptr <= head_ptr;
-        if (Q_size > 1) begin
+        if (Q_size != 0) begin
           if (head_ptr == 4'b1110) begin
             head_ptr <= 4'b0;
           end else begin
