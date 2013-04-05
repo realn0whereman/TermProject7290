@@ -1,5 +1,4 @@
 `timescale 1ns / 100ps
-
 module a_MEM_test();
   reg clk,rst;
   reg [3:0] Z_in;
@@ -41,23 +40,24 @@ endmodule
 module a_fpu_test();
   reg clk;
   reg rst;
+  reg sel;
   wire [31:0] Z ;
   wire stall;
   reg [31:0] A,B;
-  reg [3:0] op;
+  reg [2:0] op;
 initial begin
   clk = 0;
   rst = 1;
   #2 rst = 0;
-  #18 op=4'b1011; A= 32'h41200000; B=32'h40000000;
-  #12 op=4'b1101; A= 32'h41200000; B=32'h41000000;
+  //#2 op=3'b011; A= 32'h41200000; B=32'h40000000;
+  #3 op=3'b101; A= 32'h41200000; B=32'h40000000; sel = 1;
 end
   always begin
    #1 clk = ~clk;
   end
   
-                  
-  alu_F fpu(1'b1,clk,rst, op, A, B, Z,stall);
+           
+  alu_F fpu(1'b1,clk,sel,rst, op, A, B, Z,stall);
 endmodule
 
 module a_pipeline_test();

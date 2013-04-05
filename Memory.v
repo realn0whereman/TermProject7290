@@ -304,6 +304,7 @@ stall_out_C,empty,full
   
   //State maintaining parallel arrays
   reg       valid[15:0];
+  reg       rw[15:0];
   reg[31:0] addr[15:0]; 
   reg[31:0] data[15:0];
   reg[15:0] cntrl[15:0];
@@ -315,7 +316,7 @@ stall_out_C,empty,full
   
 
   integer i;
-    
+  reg found;
   integer id;
   always @(posedge clk) begin
     
@@ -327,6 +328,7 @@ stall_out_C,empty,full
 			cntrl[i] = 0;
 			Z[i] = 0;
 			valid[i] = 0;
+			rw[i] = 0;
       
 		end
 		QtailIdx=0;
@@ -341,20 +343,45 @@ stall_out_C,empty,full
 			data[id] = data_in_C;
 			cntrl[id] = cntrl_in_C;
 			Z[id] = Z_in_C;
+			rw[id] = memW;
 			
-			//send request to mem 
-			addr_out_M = addr_in_C;
-			data_out_M = data_in_C;
-			if(memW) begin
-			  rw_out_M = 1;
-			  
-			end else begin
-			  rw_out_M = 0;
+			//LD/ST forwarding
+			
+			found = 0;
+			for(i=0;i<16;i=i+1) begin
+					if(addr[i] == addr[id]) begin
+					  found = 1;
+					  if(memR)begin // current op is ld
+					   if(rw[i] == 1) begin // older op is st
+					     data[id] = data[i];
+					     valid[id] = valid[i];
+					   end else if (rw[i] == 0 && valid[i] == 1) begin // older op is ld
+					     data[id] = data[i];
+					   end
+					  end else if(memW) begin // current op is st
+					   if(rw[i] == 0) begin // older op is ld
+					     //?
+					   end
+					  end
+					end 
 			end
-			valid_out_M = 1;
-			ldstID_out_M = id;
 			
-			Qlength = Qlength + 1;
+			if(!found) begin
+    			 //send request to mem 
+    			addr_out_M = addr_in_C;
+    			data_out_M = data_in_C;
+    			if(memW) begin
+    			  rw_out_M = 1;
+    			  
+    			end else begin
+    			  rw_out_M = 0;
+    			end
+    			valid_out_M = 1;
+    			ldstID_out_M = id;
+    			
+    			Qlength = Qlength + 1;
+			end
+			
 		 end else begin
 			valid_out_M = 0;  
 		 end
@@ -610,6 +637,7 @@ endmodule
         
         
         
+
   always @(posedge clk) begin
  			if(rst == 1) begin
 				for(i=0;i<1024;i=i+1) begin

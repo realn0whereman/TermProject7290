@@ -530,6 +530,9 @@ module freg_file(rst, rw, X, Y, Z, Fz, Fx, Fy);
       for(i=0; i<16; i=i+1) begin
         fregs[i] <= 0;
       end
+      fregs[0] <=  32'h40000000;
+      fregs[1] <=  32'h40800000;
+      
     end else begin 
       if(rw == 1)
         fregs[Z] <= Fz;
@@ -602,7 +605,7 @@ module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, 
   
   preg_file pregs(.rst(rst), .rw(rw[0]), .X(X[1:0]), .Y(Y[1:0]), .Z(Pz_id), .Pset(Pset), .Pid(Pid), .Pz(Pz), .Px(Px), .Py(Py), .Pval(Pval));
   greg_file gregs(.rst(rst), .rw(rw[1]), .X(X), .Y(Y), .Z(Rz_id), .Rz(Rz), .Rx(Rx), .Ry(Ry));
-  //freg_file fregs(.rst(rst), .rw(rw[2]), .X(X), .Y(Y), .Z(Z), .Fz(Fz), .Fx(Fy), .Fy(Fy));
+  freg_file fregs(.rst(rst), .rw(rw[2]), .X(X), .Y(Y), .Z(Fz_id), .Fz(Fz), .Fx(Fx), .Fy(Fy));
   
   imm_extend immse(.ctr(signals[2:1]), .field(inst[22:0]), .imm_s(imm_s));
   
