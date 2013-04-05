@@ -56,8 +56,11 @@ end
    #1 clk = ~clk;
   end
   
-           
-  alu_F fpu(1'b1,clk,sel,rst, op, A, B, Z,stall);
+  FPFtoI ftoi(
+	clk,
+	A,
+	Z);         
+  //alu_F fpu(1'b1,clk,sel,rst, op, A, B, Z,stall);
 endmodule
 
 module a_pipeline_test();
@@ -226,44 +229,5 @@ end
   DCache4KB dCache(clk,rst,memR,memW,ldstID,addr_in,data_in,data_out,ldstID_out,empty);
 endmodule
 
-
-/*module a_test_circuit();
-
-reg clk;
-reg rst;
-reg rw_in,memR,memW;
-reg [31:0] addr_in,data_in;
-reg [15:0] cntrl_in;
-reg [3:0] Z_in;
-wire [31:0] data_out,n_pc,isn;
-wire [15:0] cntrl_out;
-wire [3:0] Z_out;
-wire stall_out,empty;
-reg stall;
-
-
-
-initial begin
-  clk = 0;
-  rw_in = 0;
-  addr_in = 0;
-  data_in = 0;
-  cntrl_in = 0;
-  stall = 0;
-  memR = 0;
-  memW = 0;
-  rst = 1;
-  #1 rst = 0;
-
-end
-
-always begin
-   #1 clk = ~clk;
-   
-end
-FE_Stage fe(clk,rst,stall,n_pc,isn);
-//LoadStoreQueue lsq(rst,clk,memR,memW,ldstID,addr_in,data_in,cntrl_in,Z_in,data_out,cntrl_out,Z_out,stall_out,ldstID_out,empty);
-//ICache4KB iCache(clk,rst,addr_in,data_in,data_out);
-endmodule*/
 
 
