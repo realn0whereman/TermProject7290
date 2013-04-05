@@ -13,6 +13,273 @@ output stall_out; // the memory system cannot accept anymore requests
 
 endmodule
 
+module tag_compute (flag, valid, index, avail);
+  input [14:0] flag, valid;
+  output reg [3:0] index, avail;
+  
+  always @(*) begin
+    case (flag)
+      15'b000000000000001 : index = 4'h0;
+      15'b000000000000010 : index = 4'h1;
+      15'b000000000000100 : index = 4'h2;
+      15'b000000000001000 : index = 4'h3;
+      15'b000000000010000 : index = 4'h4;
+      15'b000000000100000 : index = 4'h5;
+      15'b000000001000000 : index = 4'h6;
+      15'b000000010000000 : index = 4'h7;
+      15'b000000100000000 : index = 4'h8;
+      15'b000001000000000 : index = 4'h9;
+      15'b000010000000000 : index = 4'ha;
+      15'b000100000000000 : index = 4'hb;
+      15'b001000000000000 : index = 4'hc;
+      15'b010000000000000 : index = 4'hd;
+      15'b100000000000000 : index = 4'he;
+      default: index = 4'hf;
+    endcase
+  end
+
+  always @(*) begin
+    case (valid)
+      15'bxxxxxxxxxxxxxx0 : avail = 4'h0;
+      15'bxxxxxxxxxxxxx01 : avail = 4'h1;
+      15'bxxxxxxxxxxxx011 : avail = 4'h2;
+      15'bxxxxxxxxxxx0111 : avail = 4'h3;
+      15'bxxxxxxxxxx01111 : avail = 4'h4;
+      15'bxxxxxxxxx011111 : avail = 4'h5;
+      15'bxxxxxxxx0111111 : avail = 4'h6;
+      15'bxxxxxxx01111111 : avail = 4'h7;
+      15'bxxxxxx011111111 : avail = 4'h8;
+      15'bxxxxx0111111111 : avail = 4'h9;
+      15'bxxxx01111111111 : avail = 4'ha;
+      15'bxxx011111111111 : avail = 4'hb;
+      15'bxx0111111111111 : avail = 4'hc;
+      15'bx01111111111111 : avail = 4'hd;
+      15'b011111111111111 : avail = 4'he;
+      default: avail = 4'hf;
+    endcase
+  end  
+endmodule
+
+module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From Core
+            data_out_C, WB_out_C, Z_out_C, ready_out_C, stall_out_C, full, empty, //To Core
+            data_in_M, lsqID_in_M, stall_in_M, ready_in_M, //From Mem
+            addr_out_M, data_out_M, rw_out_M, lsqID_out_M, valid_out_M //To Mem
+            );
+  input clk, rst;
+  input memR, memW;
+  input [31:0] addr_in_C, data_in_C, data_in_M;
+  input [3:0] WB_in_C;
+  input [3:0] Z_in_C, lsqID_in_M;
+  input stall_in_M, ready_in_M;
+  
+  output [31:0] data_out_C, addr_out_M, data_out_M;
+  output [3:0] WB_out_C;
+  output [3:0] Z_out_C, lsqID_out_M;
+  output stall_out_C, empty, full, rw_out_M, valid_out_M, ready_out_C;
+  
+  //State maintaining parallel arrays, 15 entries
+  reg [14:0] valid;
+  reg [31:0] addr[14:0]; 
+  reg [31:0] data[14:0];
+  reg [3:0]  WB[14:0];
+  reg [3:0]  Z[14:0];
+  reg        RW[14:0];
+  reg [3:0]  tag[14:0];
+  reg        ready[14:0];
+  
+  reg [14:0] valid_forward;
+  reg [31:0] addr_forward[14:0];
+  reg [3:0] tag_forward[14:0];
+  reg [31:0] data_forward[14:0];
+  reg write_forward[14:0];
+  reg avail_ptr;
+  wire [14:0] valid_forward_wire;
+    
+  reg [3:0] head_ptr, tail_ptr, read_ptr, write_ptr;
+  reg [3:0] Q_size;
+  reg [14:0] flag;
+  
+  reg [1:0] rw_d;
+  reg [31:0] addr_d, data_d;
+  
+  wire [3:0] index, avail;
+  
+  integer i;
+  
+  always @(posedge clk) begin
+    if (rst == 1'b1) begin
+      for (i=0;i<15;i=i+1) begin
+        valid[i] <= 1'b0;
+        addr[i] <= 32'b0;
+        data[i] <= 32'b0;
+        WB[i] <= 2'b0;
+        Z[i] <= 4'b0;
+        RW[i] <= 1'b0;
+        tag[i] <= 4'b1111;
+        ready[i] <= 1'b0;
+        
+        valid_forward[i] <= 1'b0;
+        addr_forward[i] <= 32'b0;
+        tag_forward[i] <= 4'b1111;
+        data_forward[i] <= 32'b0;
+        write_forward[i] <= 1'b0;
+        
+      end
+      
+      head_ptr <= 4'b0;
+      tail_ptr <= 4'b0;
+      read_ptr <= 4'b0;
+      write_ptr <= 4'b0;
+      avail_ptr <= 4'b0;
+      Q_size <= 0;
+      flag <= 15'b0;
+      rw_d <= 0;
+      addr_d <= 0;
+      data_d <= 0;
+      
+    end else begin
+      if ((memR == 1'b1) || (memW == 1'b1)) begin
+        valid[tail_ptr] <= 1'b1;
+        addr[tail_ptr] <= addr_in_C;
+        WB[tail_ptr] <= WB_in_C;
+        Z[tail_ptr] <= Z_in_C;
+        RW[tail_ptr] <= memW;
+
+        
+        if (rw_d != 2'b01) begin
+          for(i=0;i<15;i=i+1) begin
+            if ((valid_forward[i] == 1'b1) && (addr_forward[i] == addr_in_C)) begin
+              flag[i] <= 1'b1;
+            end else begin
+              flag[i] <= 1'b0;
+            end
+          end
+          ready[tail_ptr] <= 1'b0;
+          data[tail_ptr] <= data_in_C;
+        end else begin
+          if (addr_d == addr_in_C) begin
+            flag <= 15'b111111111111111;
+            ready[tail_ptr] <= 1'b1;
+            data[tail_ptr] <= data_d;
+            
+            if (index == 4'b1111) begin
+              tag_forward[avail_ptr] <= tail_ptr;
+            end else begin
+              tag_forward[index] <= tail_ptr;
+            end           
+          end else begin
+            if (index == 4'b1111) begin
+              tag_forward[avail_ptr] <= write_ptr;
+            end else begin
+              tag_forward[index] <= write_ptr;
+            end            
+          end
+        end
+        
+        write_ptr <= tail_ptr;
+        if (tail_ptr == 4'b1110) begin
+          tail_ptr <= 4'b0;
+        end else begin
+          tail_ptr <= tail_ptr + 4'b1;
+        end
+      end
+      
+      if (ready_in_M == 1'b1) begin
+ 			  ready[lsqID_in_M] <= ready_in_M;
+			  data[lsqID_in_M] <= data_in_M; 
+      end
+        
+      if ((valid[head_ptr] == 1'b1) && (ready[head_ptr] == 1'b1)) begin
+        valid[head_ptr] <= 1'b0;
+        tag[head_ptr] <= 4'b1111;
+
+        for (i=0;i<15;i=i+1) begin
+          if ((valid[i] == 1'b1) && (tag[i] == head_ptr) && (i != head_ptr)) begin
+   			      ready[i] <= ready[head_ptr];
+			       data[i] <= data[head_ptr]; 
+          end
+        end
+        
+        for (i=0;i<15;i=i+1) begin
+          if (valid_forward[i] == 1'b1 && (i != index) && (tag_forward[i] == head_ptr)) begin
+            valid_forward[i] <= 1'b0;
+          end
+        end
+        
+        read_ptr <= head_ptr;
+        if (Q_size > 1) begin
+          if (head_ptr == 4'b1110) begin
+            head_ptr <= 4'b0;
+          end else begin
+            head_ptr <= head_ptr + 4'b1;
+          end
+        end
+        
+        if ((memR != 1'b1) && (memW != 1'b1)) begin
+          Q_size <= Q_size - 4'b1;
+        end
+        
+      end else if ((memR == 1'b1) || (memW == 1'b1)) begin
+        Q_size <= Q_size + 4'b1;
+      end
+
+      case (rw_d)
+        2'b01 : //write
+            if (index == 4'b1111) begin
+              tag[write_ptr] <= 4'b1111;
+              valid_forward[avail_ptr] <= 1'b1;
+              addr_forward[avail_ptr] <= addr_d;
+              //tag_forward[avail_ptr] <= write_ptr;
+              data_forward[avail_ptr] <= data_d;
+              avail_ptr <= avail;
+            end else begin
+              tag[write_ptr] <= 4'b1111;
+              //tag_forward[index] <= write_ptr;
+              data_forward[index] <= data_d;
+            end
+            
+        2'b10 : //read
+          begin
+            if (index == 4'b1111) begin
+              tag[write_ptr] <= write_ptr;
+              valid_forward[avail_ptr] <= 1'b1;
+              addr_forward[avail_ptr] <= addr_d;
+              tag_forward[avail_ptr] <= write_ptr;
+              avail_ptr <= avail;
+            end else begin
+              tag[write_ptr] <= tag_forward[index];
+              tag_forward[index] <= write_ptr;
+              if (write_forward[index] == 1'b1) begin
+                data[write_ptr] <= data_forward[index];
+                ready[write_ptr] <= 1'b1;
+              end
+            end
+          end
+          
+        default: ;
+      endcase
+      
+      rw_d <= {memR, memW};
+      addr_d <= addr_in_C;
+      data_d <= data_in_C;
+    end
+  end
+  
+  tag_compute tc(.flag(flag), .valid(valid_forward_wire), .index(index), .avail(avail));
+  
+  assign addr_out_M = addr[write_ptr];
+  assign data_out_M = data[write_ptr];
+  assign rw_out_M = RW[write_ptr];
+  assign valid_out_M = ((flag == 15'b0) && (rw_d[1] == 1'b1)) || (rw_d[0] == 1'b1);
+  assign lsqID_out_M = write_ptr;
+  assign data_out_C = data[head_ptr];
+  assign WB_out_C = WB[head_ptr];
+  assign Z_out_C = Z[head_ptr];
+  assign ready_out_C = ready[head_ptr];
+  assign empty = ((Q_size == 4'b0) || ((Q_size == 4'b1) && (ready[head_ptr] == 1))) ? 1 : 0;
+  assign full = (Q_size == 4'b1110) ? 1 : 0;
+endmodule
+
 
 //Load store queue which simply behaves as a FIFO queue
 //TODO  Add forwarding from ST -> LD inside of the LSQ 
@@ -171,18 +438,36 @@ module ICache4KB(clk,rst,addr_in,data_out);
     //i_mem[2] = 32'b0;
     //i_mem[2] = 32'b0_00_010100_0001_0011_000000000000111; //jali r1, r3, #7
 
-    i_mem[0] = 32'b0_00_100011_0110_0000_000000000001000; //ld r6, r0, 8
-    i_mem[1] = 32'b0_00_010100_0101_0110_000000000000111; // addi r5, r6, 7
+    i_mem[0] = 32'b0_00_100011_0000_0000_000000000001000; //ld r0, r0, 8
+    i_mem[1] = 32'b0_00_100011_0001_0000_000000000001000; //ld r1, r0, 8
+    i_mem[2] = 32'b0_00_100011_0010_0000_000000000001000; //ld r2, r0, 8
+    i_mem[3] = 32'b0_00_100011_0011_0000_000000000001000; //ld r3, r0, 8
+    i_mem[4] = 32'b0_00_100011_0100_0000_000000000001000; //ld r4, r0, 8
+    i_mem[5] = 32'b0_00_100011_0101_0000_000000000001000; //ld r5, r0, 8
+    i_mem[6] = 32'b0_00_100011_0110_0000_000000000001000; //ld r6, r0, 8
+    i_mem[7] = 32'b0_00_100011_0111_0000_000000000001000; //ld r7, r0, 8
+    i_mem[8] = 32'b0_00_100011_1000_0000_000000000001000; //ld r8, r0, 8
+    i_mem[9] = 32'b0_00_100011_1001_0000_000000000001000; //ld r9, r0, 8
+    i_mem[10] = 32'b0_00_100011_1010_0000_000000000001000; //ld r10, r0, 8
+    i_mem[11] = 32'b0_00_100011_1011_0000_000000000001000; //ld r11, r0, 8
+    i_mem[12] = 32'b0_00_100011_1100_0000_000000000001000; //ld r12, r0, 8
+    i_mem[13] = 32'b0_00_100011_1101_0000_000000000001000; //ld r13, r0, 8
+    i_mem[14] = 32'b0_00_100011_1110_0000_000000000001000; //ld r14, r0, 8
+    i_mem[15] = 32'b0_00_100011_1111_0000_000000000001000; //ld r15, r0, 8
+
+    //i_mem[0] = 32'b0_00_100011_0110_0000_000000000001000; //ld r6, r0, 8
+    //i_mem[1] = 32'b0_00_100100_0111_0000_000000000000100; //st r7, r0, 8
+    //i_mem[1] = 32'b0_00_100011_0111_0000_000000000001000; //ld r7, r0, 8
+    //i_mem[2] = 32'b0_00_100011_1000_0000_000000000001000; //ld r8, r0, 8
+    //i_mem[1] = 32'b0_00_010100_0101_0110_000000000000111; // addi r5, r6, 7
     //i_mem[1] = 32'b0;
-    i_mem[2] = 32'b0;
-    i_mem[3] = 32'b0;
-    i_mem[4] = 32'b0;
-    i_mem[5] = 32'b0;
-    i_mem[6] = 32'b0;
+    //i_mem[2] = 32'b0;
+   // i_mem[3] = 32'b0;
+    //i_mem[4] = 32'b0;
+    //i_mem[5] = 32'b0;
+    //i_mem[6] = 32'b0;
 
     //i_mem[1] = 32'b0_00_100011_0110_0000_000000000001000; //ld r6, r0, 4
-
-    //i_mem[1] = 32'b0_00_100011_0001_0000_000000000001000; //ld r6, r0, 4
 
     
     //i_mem[2] = 32'b0_00_010100_0001_0011_000000000000111; //addi r1, r3, 12
@@ -264,7 +549,7 @@ output stall_out; // the memory system cannot accept anymore requests
   always @(posedge clk) begin
 			if(rst == 1) begin
 				 for(i=0;i<1024;i=i+1) begin
-					memory[i] <= 0;
+					memory[i] <= 20;
 			   end
 			artificialDelayData[0] = 0; 
 			artificialDelayData[1] = 0; 
@@ -305,8 +590,9 @@ output stall_out; // the memory system cannot accept anymore requests
 endmodule
  
  
- module DCache4KB(clk,rst,memR,memW,ldstID,addr,Wdata,Rdata,ldstID_out,ready_out);
-        input clk,rst,memR,memW;
+ module DCache4KB(clk, rst, valid, rw, ldstID, addr, Wdata, Rdata, ldstID_out, ready_out);
+        input clk, rst;
+        input valid, rw;
         input[31:0] addr,Wdata;
         input [3:0] ldstID;
         output reg [31:0] Rdata;
@@ -324,10 +610,10 @@ endmodule
         
         
         
-  always @(posedge clk or posedge rst) begin
+  always @(posedge clk) begin
  			if(rst == 1) begin
 				for(i=0;i<1024;i=i+1) begin
-					memory[i] <= 0;
+					memory[i] <= i;
 				end
 				
 				artificialDelayData[0] <= 0; 
@@ -343,18 +629,18 @@ endmodule
 				artificialDelayID[1] <= artificialDelayID[0];
 				artificialDelayReady[1] <= artificialDelayReady[0];
 				
-        if((addr[9:0]/4)%2 == 0 || (!memW && !memR)) begin
+        if((addr[9:0]/4)%2 == 0 || (valid == 0)) begin
   				  Rdata <= artificialDelayData[1];
   				  ldstID_out <= artificialDelayID[1];
   				  ready_out <= artificialDelayReady[1];
   				 
   				  //if LD or ST is fed into the memory, complete it and buffer it
- 					if(memW) begin
+ 					if((valid == 1'b1) && (rw == 1'b1)) begin
  					  memory[addr[9:0]/4] <= Wdata;
 						artificialDelayData[0] <= 0;
 						artificialDelayID[0] <= ldstID;
   						artificialDelayReady[0] <= 1;
- 					end else if(memR) begin
+ 					end else if((valid == 1'b1) && (rw == 1'b0)) begin
 						artificialDelayData[0] <= memory[addr[9:0]/4]; 
 						artificialDelayID[0] <= ldstID;
   						artificialDelayReady[0] <= 1; 
@@ -365,11 +651,11 @@ endmodule
 					end
   					  
 			 end else begin// end variable latency hack (addr[9:0]/4)%2 == 0)
- 					if(memW) begin
+ 					if((valid == 1) && (rw == 1)) begin
  					  memory[addr[9:0]/4] <= Wdata;
 						ldstID_out <= ldstID;
 						ready_out <= 1;
- 					end else if(memR) begin
+ 					end else if(valid == 1) begin
 						Rdata <= memory[addr[9:0]/4]; 
 						ldstID_out <= ldstID;
 						ready_out <= 1;
