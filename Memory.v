@@ -158,7 +158,7 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
           ready[tail_ptr] <= 1'b0;
           data[tail_ptr] <= data_in_C;
         end else begin
-          for(i=0;i<16;i=i+1) begin
+          for(i=0;i<15;i=i+1) begin
             if ((valid_forward[i] == 1'b1) && (addr_forward[i] == addr_in_C)) begin
               flag[i] <= 1'b1;
             end else begin
@@ -186,14 +186,14 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
         valid[head_ptr] <= 1'b0;
         tag[head_ptr] <= 4'b1111;
 
-        for (i=0;i<16;i=i+1) begin
+        for (i=0;i<15;i=i+1) begin
           if ((valid[i] == 1'b1) && (tag[i] == head_ptr) && (i != head_ptr)) begin
    			      ready[i] <= ready[head_ptr];
 			       data[i] <= data[head_ptr]; 
           end
         end
         
-        for (i=0;i<16;i=i+1) begin
+        for (i=0;i<15;i=i+1) begin
           if (valid_forward[i] == 1'b1 && (i != index) && (tag_forward[i] == head_ptr)) begin
             valid_forward[i] <= 1'b0;
           end
