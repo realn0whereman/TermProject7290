@@ -40,7 +40,7 @@ module tag_compute (flag, valid, index, avail, v);
   end
 
   always @(*) begin
-    case (valid)
+    casex (valid)
       15'bxxxxxxxxxxxxxx0 : avail = 4'h0;
       15'bxxxxxxxxxxxxx01 : avail = 4'h1;
       15'bxxxxxxxxxxxx011 : avail = 4'h2;
@@ -88,11 +88,11 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
   reg [3:0]  Z[14:0];
   reg        RW[14:0];
   reg [3:0]  tag[14:0];
-  reg        ready[14:0];
+  reg [14:0] ready;
   
-  reg [1:0] valid_forward;
+  reg [14:0] valid_forward;
   reg [31:0] addr_forward[14:0];
-  reg [3:0] tag_forward[14:0];
+  reg [3:0] tag_forward[15:0];
   reg [31:0] data_forward[14:0];
   reg write_forward[14:0];
   reg [3:0] avail_ptr, avail_ptr_d;
@@ -129,11 +129,11 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
         write_forward[i] <= 1'b0;
       end
       
+      tag_forward[15] <= 4'b1111;
       head_ptr <= 4'b0;
       tail_ptr <= 4'b0;
       read_ptr <= 4'b0;
       write_ptr <= 4'b0;
-      avail_ptr <= 4'b0;
       Q_size <= 0;
       flag <= 15'b0;
       rw_d <= 0;
@@ -197,6 +197,11 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
           end
         end
         
+        if (tag_forward[index] == head_ptr) begin
+          ready[write_ptr] <= ready[head_ptr];
+          data[write_ptr] <= data[head_ptr];
+        end
+        
         read_ptr <= head_ptr;
         if (Q_size != 0) begin
           if (head_ptr == 4'b1110) begin
@@ -223,8 +228,7 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
               addr_forward[avail_ptr] <= addr_d;
               tag_forward[avail_ptr] <= write_ptr; 
               data_forward[avail_ptr] <= data_d;
-              write_forward[avail_ptr] <= 1'b1;
-              avail_ptr <= avail;           
+              write_forward[avail_ptr] <= 1'b1;         
             end else if (v == 1) begin
               tag[write_ptr] <= 4'b1111;
               tag_forward[avail_ptr_d] <= write_ptr;
@@ -246,11 +250,10 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
               addr_forward[avail_ptr] <= addr_d;
               tag_forward[avail_ptr] <= write_ptr;
               write_forward[avail_ptr] <= 1'b0;
-              avail_ptr <= avail;
             end else if (v == 1) begin
               tag[write_ptr] <= write_ptr_d;
               tag_forward[avail_ptr_d] <= write_ptr;
-              write_forward[avail_ptr] <= 1'b0;
+              write_forward[avail_ptr_d] <= 1'b0;
             end else begin
               tag[write_ptr] <= tag_forward[index];
               tag_forward[index] <= write_ptr;
@@ -269,6 +272,15 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
       addr_d <= addr_in_C;
       data_d <= data_in_C;
       write_ptr_d <= write_ptr;
+    end
+  end
+  
+  always @(negedge clk) begin
+    if (rst == 1'b1) begin
+      avail_ptr <= 4'b0;
+      avail_ptr_d <= 4'b0;
+    end else begin
+      avail_ptr <= avail;
       if (v == 0) begin
         avail_ptr_d <= avail_ptr;
       end
@@ -276,6 +288,8 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
   end
   
   tag_compute tc(.flag(flag), .valid(valid_forward_wire), .index(index), .avail(avail), .v(v));
+  
+  assign valid_forward_wire = valid_forward;
   
   assign addr_out_M = addr[write_ptr];
   assign data_out_M = data[write_ptr];
@@ -288,6 +302,7 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
   assign ready_out_C = ready[head_ptr];
   assign empty = ((Q_size == 4'b0) || ((Q_size == 4'b1) && (ready[head_ptr] == 1))) ? 1 : 0;
   assign full = (Q_size == 4'b1110) ? 1 : 0;
+  assign stall_out_C = 0; //FIXME
 endmodule
 
 
@@ -474,24 +489,24 @@ module ICache4KB(clk,rst,addr_in,data_out);
     //i_mem[1] = 32'b0;
     //i_mem[2] = 32'b0;
     //i_mem[2] = 32'b0_00_010100_0001_0011_000000000000111; //jali r1, r3, #7
-
-    i_mem[0] = 32'b0_00_100011_0000_0000_000000000001000; //ld r0, r0, 8
-    i_mem[1] = 32'b0_00_100011_0001_0000_000000000001000; //ld r1, r0, 8
+    i_mem[0] = 32'b0;
+    //i_mem[0] = 32'b0_00_100011_0000_0000_000000000001000; //ld r0, r0, 8
+    i_mem[1] = 32'b0_00_100011_0001_0000_000000000000100; //ld r1, r0, 4
     i_mem[2] = 32'b0_00_100011_0010_0000_000000000001000; //ld r2, r0, 8
-    i_mem[3] = 32'b0_00_100011_0011_0000_000000000001000; //ld r3, r0, 8
+    i_mem[3] = 32'b0_00_100011_0011_0000_000000000000100; //ld r3, r0, 4
     i_mem[4] = 32'b0_00_100011_0100_0000_000000000001000; //ld r4, r0, 8
-    i_mem[5] = 32'b0_00_100011_0101_0000_000000000001000; //ld r5, r0, 8
+    i_mem[5] = 32'b0_00_100011_0101_0000_000000000000100; //ld r5, r0, 4
     i_mem[6] = 32'b0_00_100011_0110_0000_000000000001000; //ld r6, r0, 8
-    i_mem[7] = 32'b0_00_100011_0111_0000_000000000001000; //ld r7, r0, 8
+    i_mem[7] = 32'b0_00_100011_0111_0000_000000000000100; //ld r7, r0, 4
     i_mem[8] = 32'b0_00_100011_1000_0000_000000000001000; //ld r8, r0, 8
-    i_mem[9] = 32'b0_00_100011_1001_0000_000000000001000; //ld r9, r0, 8
+    i_mem[9] = 32'b0_00_100011_1001_0000_000000000000100; //ld r9, r0, 4
     i_mem[10] = 32'b0_00_100011_1010_0000_000000000001000; //ld r10, r0, 8
-    i_mem[11] = 32'b0_00_100011_1011_0000_000000000001000; //ld r11, r0, 8
+    i_mem[11] = 32'b0_00_100011_1011_0000_000000000000100; //ld r11, r0, 4
     i_mem[12] = 32'b0_00_100011_1100_0000_000000000001000; //ld r12, r0, 8
-    i_mem[13] = 32'b0_00_100011_1101_0000_000000000001000; //ld r13, r0, 8
+    i_mem[13] = 32'b0_00_100011_1101_0000_000000000000100; //ld r13, r0, 4
     i_mem[14] = 32'b0_00_100011_1110_0000_000000000001000; //ld r14, r0, 8
-    i_mem[15] = 32'b0_00_100011_1111_0000_000000000001000; //ld r15, r0, 8
-
+    i_mem[15] = 32'b0_00_100011_1111_0000_000000000000100; //ld r15, r0, 4
+/*
     i_mem[16] = 32'b0_00_100011_0000_0000_000000000000100; //ld r0, r0, 4
     i_mem[17] = 32'b0_00_100011_0001_0000_000000000000100; //ld r1, r0, 4
     i_mem[18] = 32'b0_00_100011_0010_0000_000000000000100; //ld r2, r0, 4
@@ -508,6 +523,7 @@ module ICache4KB(clk,rst,addr_in,data_out);
     i_mem[29] = 32'b0_00_100011_1101_0000_000000000000100; //ld r13, r0, 4
     i_mem[30] = 32'b0_00_100011_1110_0000_000000000000100; //ld r14, r0, 4
     i_mem[31] = 32'b0_00_100011_1111_0000_000000000000100; //ld r15, r0, 4
+*/
 
     //i_mem[0] = 32'b0_00_100011_0110_0000_000000000001000; //ld r6, r0, 8
     //i_mem[1] = 32'b0_00_100100_0111_0000_000000000000100; //st r7, r0, 8
