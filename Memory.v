@@ -104,6 +104,8 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
   
   reg [1:0] rw_d;
   reg [31:0] addr_d, data_d;
+  reg [3:0] index_d;
+  reg v_d;
   
   wire [3:0] index, avail;
   wire v;
@@ -149,8 +151,13 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
 
         if ((rw_d == 2'b01) && (addr_d == addr_in_C)) begin
           flag <= 15'b111111111111111;
+          if (memR == 1'b1) begin
           data[tail_ptr] <= data_d;
           ready[tail_ptr] <= 1'b1;
+          end else begin
+            data[tail_ptr] <= data_in_C;
+            ready[tail_ptr] <= 1'b0;
+          end
         end else if (rw_d == 2'b10 && (addr_d == addr_in_C)) begin
           flag <= 15'b111111111111111;
           ready[tail_ptr] <= 1'b0;
@@ -177,7 +184,9 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
       
       if (ready_in_M == 1'b1) begin
         ready[lsqID_in_M] <= ready_in_M;
-        data[lsqID_in_M] <= data_in_M; 
+        if (RW[lsqID_in_M] == 1'b0) begin
+          data[lsqID_in_M] <= data_in_M;
+        end 
       end
         
       if ((valid[head_ptr] == 1'b1) && (ready[head_ptr] == 1'b1)) begin
@@ -197,7 +206,7 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
           end
         end
         
-        if (tag_forward[index] == head_ptr) begin
+        if ((tag_forward[index] == head_ptr) && (memR == 1'b1)) begin
           ready[write_ptr] <= ready[head_ptr];
           data[write_ptr] <= data[head_ptr];
         end
@@ -272,6 +281,8 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
       addr_d <= addr_in_C;
       data_d <= data_in_C;
       write_ptr_d <= write_ptr;
+      v_d <= v;
+      index_d <= index;
     end
   end
   
@@ -281,7 +292,7 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
       avail_ptr_d <= 4'b0;
     end else begin
       avail_ptr <= avail;
-      if (v == 0) begin
+      if ((index_d == 4'b1111) && (v_d == 0)) begin
         avail_ptr_d <= avail_ptr;
       end
     end
@@ -497,7 +508,7 @@ module ICache4KB(clk,rst,addr_in,data_out);
     i_mem[4] = 32'b0_00_100011_0100_0000_000000000001000; //ld r4, r0, 8
     i_mem[5] = 32'b0_00_100011_0101_0000_000000000000100; //ld r5, r0, 4
     i_mem[6] = 32'b0_00_100011_0110_0000_000000000001000; //ld r6, r0, 8
-    i_mem[7] = 32'b0_00_100011_0111_0000_000000000000100; //ld r7, r0, 4
+    i_mem[7] = 32'b0_00_100100_0111_0000_000000000000100; //st r7, r0, 4
     i_mem[8] = 32'b0_00_100011_1000_0000_000000000001000; //ld r8, r0, 8
     i_mem[9] = 32'b0_00_100011_1001_0000_000000000000100; //ld r9, r0, 4
     i_mem[10] = 32'b0_00_100011_1010_0000_000000000001000; //ld r10, r0, 8
