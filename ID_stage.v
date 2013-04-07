@@ -550,11 +550,8 @@ module freg_file(rst, rw, X, Y, Z, Fz, Fx, Fy);
       for(i=0; i<16; i=i+1) begin
         fregs[i] <= 0;
       end
-      /*fregs[3] <=  32'h45000000;
-      fregs[1] <=  32'h40800000;
-      */
-      fregs[1] <= 32'h47000000;
-      fregs[3] <= 32'h44800000;
+      fregs[1] <= 32'h40400000;
+      fregs[3] <= 32'h40800000;
     end else begin 
       if(rw == 1)
         fregs[Z] <= Fz;

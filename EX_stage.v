@@ -57,7 +57,7 @@ module alu_I(clk,sel, op, A, B, Z,stall);
   output stall;
   
   wire [31:0] mulResult,modResult,divResult,shiftResult;
-  wire [3:0] latency;
+  reg [3:0] latency;
   stall_counter stalls(.clk(clk),.sel(sel),.latency(latency),.stall(stall));
   
   IMul imul(
@@ -78,7 +78,8 @@ module alu_I(clk,sel, op, A, B, Z,stall);
       case (op)
         4'b0001: //add
           begin
-            Z = A + B;      
+            Z = A + B; 
+            latency = 0;     
           end
         4'b0010: //sub
           begin
@@ -141,6 +142,7 @@ module alu_I(clk,sel, op, A, B, Z,stall);
           end
       endcase
     end else begin
+      
       Z = 'bx;
     end
   end
@@ -165,7 +167,9 @@ module stall_counter(clk,sel,latency,stall);
     state <= init;
     isEnd <= 0;
   end
-  
+  always @(latency) begin
+    state <= init;
+  end
   
   always @(posedge clk) begin
     case(state)
@@ -241,7 +245,7 @@ module alu_F(sel,clk, op, A, B, Z,stall);
 	.clock(clk),
 	.dataa(A),
 	.datab(B),
-	.division_by_zero(exceptions),
+	.division_by_zero(exception),
 	.result(divResult));
 	
 	FPFtoI ftoi(
@@ -271,15 +275,15 @@ module alu_F(sel,clk, op, A, B, Z,stall);
         end
         3'b010: //fneg
         begin
-            Z[30:0] = A[30:0];
-            Z[31] = ~A[31];  
-            latency = 0;  
+          Z[30:0] = A[30:0];
+          Z[31] = ~A[31];  
+          latency = 0;  
         end
         3'b011: //fadd     
         begin
-            addSub = 1;
-            latency = 7-1;
-            Z = addSubResult;  
+          addSub = 1;
+          latency = 7-1;
+          Z = addSubResult;  
         end
         3'b100: //fsub
         begin
@@ -305,15 +309,15 @@ module alu_F(sel,clk, op, A, B, Z,stall);
       endcase
     end else begin
       Z = 'bx;
-      //latency = 0;
     end
+    
   end
 
 endmodule
 
 
 
-module execution(EX, clk, rst, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, p1_mux, p2_mux, r1_mux, r2_mux, wdata_mux, f1_mux, f2_mux, pval_mm, rval_mm, rval_wb, fval_mm, result_P, result_I, result_F, Wdata, BUSY);
+module execution(EX, clk, rst, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, WB_in, p1_mux, p2_mux, r1_mux, r2_mux, wdata_mux, f1_mux, f2_mux, pval_mm, rval_mm, rval_wb, fval_mm, result_P, result_I, result_F, Wdata, BUSY, WB_out);
   input [6:0] EX;
   input clk,rst;
   input Px;
@@ -332,6 +336,7 @@ module execution(EX, clk, rst, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, p1_mux, p2_m
   input [1:0] r2_mux;
   input [1:0] wdata_mux;
   input pval_mm;
+  input [3:0] WB_in;
   input [31:0] rval_mm;
   input [31:0] rval_wb;
   input [31:0] fval_mm;
@@ -340,6 +345,7 @@ module execution(EX, clk, rst, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, p1_mux, p2_m
   output [31:0] result_F;
   output reg [31:0] Wdata;
   output BUSY;
+  output reg [3:0] WB_out;
 
   reg PPU_src1;
   reg PPU_src2;
@@ -411,11 +417,24 @@ module execution(EX, clk, rst, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, p1_mux, p2_m
     endcase
   end
   
+  reg [3:0] WB_buf;
+  always @(*) begin
+      WB_buf <= WB_in;
+  end
+  
+  always @(*) begin
+    if(BUSY == 1'b1) begin
+      WB_out = 3'b000;
+    end else begin
+      WB_out = WB_in; 
+    end
+  end
+  
 
   alu_P P1(.sel(!EX[0] & (!EX[4])), .op(EX[3:1]), .A(PPU_src1), .B(PPU_src2), .C(ALU_src1), .Z(result_P));
   alu_I I1(.sel(EX[0]), .op(EX[4:1]),.clk(clk), .A(ALU_src1), .B(ALU_src2), .Z(result_I),.stall(BUSY_I));
   alu_F F1(.sel(!EX[0] & EX[4]),.clk(clk), .op(EX[3:1]), .A(FPU_src1), .B(FPU_src2), .Z(result_F),.stall(BUSY_F));
 
-  assign BUSY = BUSY_I | BUSY_F;
+  assign BUSY = ((BUSY_I & EX[0]) | (BUSY_F & !EX[0] & EX[4])) ;
   
 endmodule
