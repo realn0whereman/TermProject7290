@@ -23,7 +23,7 @@ module alu_control(opcode, alu_control_signals);
         end
       6'h24: //st
         begin
-          alu_control_signals[19:18] = 2'b01;
+          alu_control_signals[19:18] = 2'b11;
           alu_control_signals[17:14] = 4'b000_x;         
           alu_control_signals[13:12] = 2'b1_0;
           alu_control_signals[11:5] = 7'b0_1_0001_1;

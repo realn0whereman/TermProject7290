@@ -30,6 +30,7 @@ module pipeline(clk, rst);
   wire f2_mux;
   wire [1:0] r1_mux;
   wire [1:0] r2_mux;
+  wire [1:0] wdata_mux;
   wire [31:0] jmpi_id;
   wire [1:0] jmp_type;
   wire [1:0] JMP_id;
@@ -62,7 +63,7 @@ module pipeline(clk, rst);
   
   //Pipeline forward signal generation
   forward fwd(.clk(clk), .EX_ex(EX_ex), .RW_mm(WB_mm[3:1]), .RW_wb(WB_wb[1]), .Z_mm(Z_mm), .Z_wb(Z_wb), .Y_ex(Y_ex), .X_ex(X_ex), 
-    .p1_mux(p1_mux), .p2_mux(p2_mux), .r1_mux(r1_mux), .r2_mux(r2_mux), .f1_mux(f1_mux), .f2_mux(f2_mux));
+    .p1_mux(p1_mux), .p2_mux(p2_mux), .r1_mux(r1_mux), .r2_mux(r2_mux), .wdata_mux(wdata_mux), .f1_mux(f1_mux), .f2_mux(f2_mux));
   
   //Fetch Stage + FE/ID Latch:
   FE_Stage fe_stage(.clk(clk), .rst(rst), .ctr(ctrl_ifid), .jmp_type(jmp_type), .jmp_r(Rx_id), .jmp_i(jmpi_id), .n_pc(pc_n_if), .isn(inst_if));
@@ -78,7 +79,7 @@ module pipeline(clk, rst);
   //Execute Stage + EX/MEM Latch:
    execution exe(.EX(EX_ex), .clk(clk),.rst(rst), .Px(Px_ex), .Py(Py_ex), .Rx(Rx_ex), .Ry(Ry_ex), .Fx(Fx_ex), .Fy(Fy_ex), .imm_s(imm_ex), .pc_n(pc_n_ex), 
     .result_P(ResP_ex), .result_I(ResI_ex), .result_F(ResF_ex), .Wdata(Wdata_ex), .p1_mux(p1_mux), .p2_mux(p2_mux), .r1_mux(r1_mux), .r2_mux(r2_mux),
-    .f1_mux(f1_mux), .f2_mux(f2_mux), .pval_mm(ResP_mm), .rval_mm(ResI_mm), .rval_wb(ResI_final), .fval_mm(ResF_mm), .BUSY(busy_ex));
+    .wdata_mux(wdata_mux), .f1_mux(f1_mux), .f2_mux(f2_mux), .pval_mm(ResP_mm), .rval_mm(ResI_mm), .rval_wb(ResI_final), .fval_mm(ResF_mm), .BUSY(busy_ex));
     
   LatchN preg_exmm(.rst(rst), .clk(clk), .ctr(ctrl_exmm), .data_in({Z_ex, ResI_ex, ResF_ex, ResP_ex, Wdata_ex, MEM_ex, WB_ex}), 
     .data_out({Z_mm, ResI_mm, ResF_mm, ResP_mm, Wdata_mm, MEM_mm, WB_mm}));

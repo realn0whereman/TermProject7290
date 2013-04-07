@@ -312,7 +312,8 @@ module alu_F(sel,clk, op, A, B, Z,stall);
 endmodule
 
 
-module execution(EX,clk,rst, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, p1_mux, p2_mux, r1_mux, r2_mux, f1_mux, f2_mux, pval_mm, rval_mm, rval_wb, fval_mm, result_P, result_I, result_F, Wdata, BUSY);
+
+module execution(EX, clk, rst, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, p1_mux, p2_mux, r1_mux, r2_mux, wdata_mux, f1_mux, f2_mux, pval_mm, rval_mm, rval_wb, fval_mm, result_P, result_I, result_F, Wdata, BUSY);
   input [6:0] EX;
   input clk,rst;
   input Px;
@@ -329,6 +330,7 @@ module execution(EX,clk,rst, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, p1_mux, p2_mux
   input f2_mux;
   input [1:0] r1_mux;
   input [1:0] r2_mux;
+  input [1:0] wdata_mux;
   input pval_mm;
   input [31:0] rval_mm;
   input [31:0] rval_wb;
@@ -336,7 +338,7 @@ module execution(EX,clk,rst, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, p1_mux, p2_mux
   output result_P;
   output [31:0] result_I;
   output [31:0] result_F;
-  output [31:0] Wdata;
+  output reg [31:0] Wdata;
   output BUSY;
 
   reg PPU_src1;
@@ -398,15 +400,22 @@ module execution(EX,clk,rst, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, p1_mux, p2_mux
       default: FPU_src2 = 'bx;
     endcase
   end
+
+  always @(*) begin
+    case (wdata_mux)
+      2'b00: Wdata = Rx;
+      2'b01: Wdata = rval_mm;
+      2'b10: Wdata = rval_wb;
+      2'b11: Wdata = imm_s;
+      default: Wdata = 'bx;
+    endcase
+  end
   
-  assign Wdata = Rx;
+
   alu_P P1(.sel(!EX[0] & (!EX[4])), .op(EX[3:1]), .A(PPU_src1), .B(PPU_src2), .C(ALU_src1), .Z(result_P));
   alu_I I1(.sel(EX[0]), .op(EX[4:1]),.clk(clk), .A(ALU_src1), .B(ALU_src2), .Z(result_I),.stall(BUSY_I));
   alu_F F1(.sel(!EX[0] & EX[4]),.clk(clk), .op(EX[3:1]), .A(FPU_src1), .B(FPU_src2), .Z(result_F),.stall(BUSY_F));
 
   assign BUSY = BUSY_I | BUSY_F;
-  //FIXME
-  //assign result_F = 'bx;
-  
   
 endmodule
