@@ -13,9 +13,10 @@ output stall_out; // the memory system cannot accept anymore requests
 
 endmodule
 
-module tag_compute (flag, valid, index, avail);
+module tag_compute (flag, valid, index, avail, v);
   input [14:0] flag, valid;
   output reg [3:0] index, avail;
+  output v;
   
   always @(*) begin
     case (flag)
@@ -39,7 +40,7 @@ module tag_compute (flag, valid, index, avail);
   end
 
   always @(*) begin
-    case (valid)
+    casex (valid)
       15'bxxxxxxxxxxxxxx0 : avail = 4'h0;
       15'bxxxxxxxxxxxxx01 : avail = 4'h1;
       15'bxxxxxxxxxxxx011 : avail = 4'h2;
@@ -58,6 +59,8 @@ module tag_compute (flag, valid, index, avail);
       default: avail = 4'hf;
     endcase
   end  
+  
+  assign v = (flag == 15'b111111111111111) ? 1 : 0;
 endmodule
 
 module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From Core
@@ -85,24 +88,27 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
   reg [3:0]  Z[14:0];
   reg        RW[14:0];
   reg [3:0]  tag[14:0];
-  reg        ready[14:0];
+  reg [14:0] ready;
   
   reg [14:0] valid_forward;
   reg [31:0] addr_forward[14:0];
-  reg [3:0] tag_forward[14:0];
+  reg [3:0] tag_forward[15:0];
   reg [31:0] data_forward[14:0];
   reg write_forward[14:0];
-  reg avail_ptr;
+  reg [3:0] avail_ptr, avail_ptr_d;
   wire [14:0] valid_forward_wire;
     
-  reg [3:0] head_ptr, tail_ptr, read_ptr, write_ptr;
+  reg [3:0] head_ptr, tail_ptr, read_ptr, write_ptr, write_ptr_d;
   reg [3:0] Q_size;
   reg [14:0] flag;
   
   reg [1:0] rw_d;
   reg [31:0] addr_d, data_d;
+  reg [3:0] index_d;
+  reg v_d;
   
   wire [3:0] index, avail;
+  wire v;
   
   integer i;
   
@@ -123,20 +129,18 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
         tag_forward[i] <= 4'b1111;
         data_forward[i] <= 32'b0;
         write_forward[i] <= 1'b0;
-        
       end
       
+      tag_forward[15] <= 4'b1111;
       head_ptr <= 4'b0;
       tail_ptr <= 4'b0;
       read_ptr <= 4'b0;
       write_ptr <= 4'b0;
-      avail_ptr <= 4'b0;
       Q_size <= 0;
       flag <= 15'b0;
       rw_d <= 0;
       addr_d <= 0;
       data_d <= 0;
-      
     end else begin
       if ((memR == 1'b1) || (memW == 1'b1)) begin
         valid[tail_ptr] <= 1'b1;
@@ -145,8 +149,20 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
         Z[tail_ptr] <= Z_in_C;
         RW[tail_ptr] <= memW;
 
-        
-        if (rw_d != 2'b01) begin
+        if ((rw_d == 2'b01) && (addr_d == addr_in_C)) begin
+          flag <= 15'b111111111111111;
+          if (memR == 1'b1) begin
+          data[tail_ptr] <= data_d;
+          ready[tail_ptr] <= 1'b1;
+          end else begin
+            data[tail_ptr] <= data_in_C;
+            ready[tail_ptr] <= 1'b0;
+          end
+        end else if (rw_d == 2'b10 && (addr_d == addr_in_C)) begin
+          flag <= 15'b111111111111111;
+          ready[tail_ptr] <= 1'b0;
+          data[tail_ptr] <= data_in_C;
+        end else begin
           for(i=0;i<15;i=i+1) begin
             if ((valid_forward[i] == 1'b1) && (addr_forward[i] == addr_in_C)) begin
               flag[i] <= 1'b1;
@@ -156,24 +172,6 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
           end
           ready[tail_ptr] <= 1'b0;
           data[tail_ptr] <= data_in_C;
-        end else begin
-          if (addr_d == addr_in_C) begin
-            flag <= 15'b111111111111111;
-            ready[tail_ptr] <= 1'b1;
-            data[tail_ptr] <= data_d;
-            
-            if (index == 4'b1111) begin
-              tag_forward[avail_ptr] <= tail_ptr;
-            end else begin
-              tag_forward[index] <= tail_ptr;
-            end           
-          end else begin
-            if (index == 4'b1111) begin
-              tag_forward[avail_ptr] <= write_ptr;
-            end else begin
-              tag_forward[index] <= write_ptr;
-            end            
-          end
         end
         
         write_ptr <= tail_ptr;
@@ -185,8 +183,10 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
       end
       
       if (ready_in_M == 1'b1) begin
- 			  ready[lsqID_in_M] <= ready_in_M;
-			  data[lsqID_in_M] <= data_in_M; 
+        ready[lsqID_in_M] <= ready_in_M;
+        if (RW[lsqID_in_M] == 1'b0) begin
+          data[lsqID_in_M] <= data_in_M;
+        end 
       end
         
       if ((valid[head_ptr] == 1'b1) && (ready[head_ptr] == 1'b1)) begin
@@ -195,8 +195,8 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
 
         for (i=0;i<15;i=i+1) begin
           if ((valid[i] == 1'b1) && (tag[i] == head_ptr) && (i != head_ptr)) begin
-   			      ready[i] <= ready[head_ptr];
-			       data[i] <= data[head_ptr]; 
+            ready[i] <= ready[head_ptr];
+            data[i] <= data[head_ptr]; 
           end
         end
         
@@ -204,6 +204,11 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
           if (valid_forward[i] == 1'b1 && (i != index) && (tag_forward[i] == head_ptr)) begin
             valid_forward[i] <= 1'b0;
           end
+        end
+        
+        if ((tag_forward[index] == head_ptr) && (memR == 1'b1)) begin
+          ready[write_ptr] <= ready[head_ptr];
+          data[write_ptr] <= data[head_ptr];
         end
         
         read_ptr <= head_ptr;
@@ -225,30 +230,43 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
 
       case (rw_d)
         2'b01 : //write
-            if (index == 4'b1111) begin
+          begin
+            if ((index == 4'b1111) && (v == 0)) begin
               tag[write_ptr] <= 4'b1111;
               valid_forward[avail_ptr] <= 1'b1;
               addr_forward[avail_ptr] <= addr_d;
-              //tag_forward[avail_ptr] <= write_ptr;
+              tag_forward[avail_ptr] <= write_ptr; 
               data_forward[avail_ptr] <= data_d;
-              avail_ptr <= avail;
+              write_forward[avail_ptr] <= 1'b1;         
+            end else if (v == 1) begin
+              tag[write_ptr] <= 4'b1111;
+              tag_forward[avail_ptr_d] <= write_ptr;
+              data_forward[avail_ptr_d] <= data_d;
+              write_forward[avail_ptr_d] <= 1'b1;
             end else begin
               tag[write_ptr] <= 4'b1111;
-              //tag_forward[index] <= write_ptr;
+              tag_forward[index] <= write_ptr; 
               data_forward[index] <= data_d;
+              write_forward[index] <= 1'b1;
             end
+          end
             
         2'b10 : //read
           begin
-            if (index == 4'b1111) begin
+            if ((index == 4'b1111) && (v == 0)) begin
               tag[write_ptr] <= write_ptr;
               valid_forward[avail_ptr] <= 1'b1;
               addr_forward[avail_ptr] <= addr_d;
               tag_forward[avail_ptr] <= write_ptr;
-              avail_ptr <= avail;
+              write_forward[avail_ptr] <= 1'b0;
+            end else if (v == 1) begin
+              tag[write_ptr] <= write_ptr_d;
+              tag_forward[avail_ptr_d] <= write_ptr;
+              write_forward[avail_ptr_d] <= 1'b0;
             end else begin
               tag[write_ptr] <= tag_forward[index];
               tag_forward[index] <= write_ptr;
+              write_forward[index] <= 1'b0;
               if (write_forward[index] == 1'b1) begin
                 data[write_ptr] <= data_forward[index];
                 ready[write_ptr] <= 1'b1;
@@ -262,10 +280,27 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
       rw_d <= {memR, memW};
       addr_d <= addr_in_C;
       data_d <= data_in_C;
+      write_ptr_d <= write_ptr;
+      v_d <= v;
+      index_d <= index;
     end
   end
   
-  tag_compute tc(.flag(flag), .valid(valid_forward_wire), .index(index), .avail(avail));
+  always @(negedge clk) begin
+    if (rst == 1'b1) begin
+      avail_ptr <= 4'b0;
+      avail_ptr_d <= 4'b0;
+    end else begin
+      avail_ptr <= avail;
+      if ((index_d == 4'b1111) && (v_d == 0)) begin
+        avail_ptr_d <= avail_ptr;
+      end
+    end
+  end
+  
+  tag_compute tc(.flag(flag), .valid(valid_forward_wire), .index(index), .avail(avail), .v(v));
+  
+  assign valid_forward_wire = valid_forward;
   
   assign addr_out_M = addr[write_ptr];
   assign data_out_M = data[write_ptr];
@@ -278,6 +313,7 @@ module LSQ (clk, rst, memR, memW, addr_in_C, data_in_C, WB_in_C, Z_in_C, //From 
   assign ready_out_C = ready[head_ptr];
   assign empty = ((Q_size == 4'b0) || ((Q_size == 4'b1) && (ready[head_ptr] == 1))) ? 1 : 0;
   assign full = (Q_size == 4'b1110) ? 1 : 0;
+  assign stall_out_C = 0; //FIXME
 endmodule
 
 
@@ -464,23 +500,41 @@ module ICache4KB(clk,rst,addr_in,data_out);
     //i_mem[1] = 32'b0;
     //i_mem[2] = 32'b0;
     //i_mem[2] = 32'b0_00_010100_0001_0011_000000000000111; //jali r1, r3, #7
-
-    i_mem[0] = 32'b0_00_100011_0000_0000_000000000001000; //ld r0, r0, 8
-    i_mem[1] = 32'b0_00_100011_0001_0000_000000000001000; //ld r1, r0, 8
+    i_mem[0] = 32'b0;
+    //i_mem[0] = 32'b0_00_100011_0000_0000_000000000001000; //ld r0, r0, 8
+    i_mem[1] = 32'b0_00_100011_0001_0000_000000000000100; //ld r1, r0, 4
     i_mem[2] = 32'b0_00_100011_0010_0000_000000000001000; //ld r2, r0, 8
-    i_mem[3] = 32'b0_00_100011_0011_0000_000000000001000; //ld r3, r0, 8
+    i_mem[3] = 32'b0_00_100011_0011_0000_000000000000100; //ld r3, r0, 4
     i_mem[4] = 32'b0_00_100011_0100_0000_000000000001000; //ld r4, r0, 8
-    i_mem[5] = 32'b0_00_100011_0101_0000_000000000001000; //ld r5, r0, 8
+    i_mem[5] = 32'b0_00_100011_0101_0000_000000000000100; //ld r5, r0, 4
     i_mem[6] = 32'b0_00_100011_0110_0000_000000000001000; //ld r6, r0, 8
-    i_mem[7] = 32'b0_00_100011_0111_0000_000000000001000; //ld r7, r0, 8
+    i_mem[7] = 32'b0_00_100100_0111_0000_000000000000100; //st r7, r0, 4
     i_mem[8] = 32'b0_00_100011_1000_0000_000000000001000; //ld r8, r0, 8
-    i_mem[9] = 32'b0_00_100011_1001_0000_000000000001000; //ld r9, r0, 8
+    i_mem[9] = 32'b0_00_100011_1001_0000_000000000000100; //ld r9, r0, 4
     i_mem[10] = 32'b0_00_100011_1010_0000_000000000001000; //ld r10, r0, 8
-    i_mem[11] = 32'b0_00_100011_1011_0000_000000000001000; //ld r11, r0, 8
+    i_mem[11] = 32'b0_00_100011_1011_0000_000000000000100; //ld r11, r0, 4
     i_mem[12] = 32'b0_00_100011_1100_0000_000000000001000; //ld r12, r0, 8
-    i_mem[13] = 32'b0_00_100011_1101_0000_000000000001000; //ld r13, r0, 8
+    i_mem[13] = 32'b0_00_100011_1101_0000_000000000000100; //ld r13, r0, 4
     i_mem[14] = 32'b0_00_100011_1110_0000_000000000001000; //ld r14, r0, 8
-    i_mem[15] = 32'b0_00_100011_1111_0000_000000000001000; //ld r15, r0, 8
+    i_mem[15] = 32'b0_00_100011_1111_0000_000000000000100; //ld r15, r0, 4
+/*
+    i_mem[16] = 32'b0_00_100011_0000_0000_000000000000100; //ld r0, r0, 4
+    i_mem[17] = 32'b0_00_100011_0001_0000_000000000000100; //ld r1, r0, 4
+    i_mem[18] = 32'b0_00_100011_0010_0000_000000000000100; //ld r2, r0, 4
+    i_mem[19] = 32'b0_00_100011_0011_0000_000000000000100; //ld r3, r0, 4
+    i_mem[20] = 32'b0_00_100011_0100_0000_000000000000100; //ld r4, r0, 4
+    i_mem[21] = 32'b0_00_100011_0101_0000_000000000000100; //ld r5, r0, 4
+    i_mem[22] = 32'b0_00_100011_0110_0000_000000000000100; //ld r6, r0, 4
+    i_mem[23] = 32'b0_00_100011_0111_0000_000000000000100; //ld r7, r0, 4
+    i_mem[24] = 32'b0_00_100011_1000_0000_000000000000100; //ld r8, r0, 4
+    i_mem[25] = 32'b0_00_100011_1001_0000_000000000000100; //ld r9, r0, 4
+    i_mem[26] = 32'b0_00_100011_1010_0000_000000000000100; //ld r10, r0, 4
+    i_mem[27] = 32'b0_00_100011_1011_0000_000000000000100; //ld r11, r0, 4
+    i_mem[28] = 32'b0_00_100011_1100_0000_000000000000100; //ld r12, r0, 4
+    i_mem[29] = 32'b0_00_100011_1101_0000_000000000000100; //ld r13, r0, 4
+    i_mem[30] = 32'b0_00_100011_1110_0000_000000000000100; //ld r14, r0, 4
+    i_mem[31] = 32'b0_00_100011_1111_0000_000000000000100; //ld r15, r0, 4
+*/
 
     //i_mem[0] = 32'b0_00_100011_0110_0000_000000000001000; //ld r6, r0, 8
     //i_mem[1] = 32'b0_00_100100_0111_0000_000000000000100; //st r7, r0, 8
