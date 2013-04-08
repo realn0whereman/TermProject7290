@@ -1,4 +1,4 @@
-module FE_Stage(clk, rst, ctr, jmp_type, jmp_r, jmp_i, n_pc, isn);
+module FE_Stage(clk, rst, ctr, jmp_type, jmp_r, jmp_i, n_pc, isn, pc_cur);
   input clk,rst;
   input [1:0] ctr; // if this is 10 then stall.
   input [1:0] jmp_type; // 00: normal, 01: jump reg, 10: jump imm, 11: int
@@ -6,6 +6,7 @@ module FE_Stage(clk, rst, ctr, jmp_type, jmp_r, jmp_i, n_pc, isn);
   input [31:0] jmp_i;  
   output [31:0] n_pc;
   output [31:0] isn;
+  output [31:0] pc_cur;
   
   reg[31:0] pc_r;
   reg[31:0] pc;
@@ -29,10 +30,11 @@ module FE_Stage(clk, rst, ctr, jmp_type, jmp_r, jmp_i, n_pc, isn);
       2'b00: pc = pc_r + 4;
       2'b01: pc = jmp_r;
       2'b10: pc = jmp_i;
-      2'b11: pc = 32'hC0000000; //faked interrupt entry
+      2'b11: pc = 32'h10; //faked interrupt entry
     endcase
   end
   
   assign n_pc = pc_r + 4;
+  assign pc_cur = pc_r;
 endmodule
 

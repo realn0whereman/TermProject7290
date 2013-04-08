@@ -336,6 +336,57 @@ module alu_control(opcode, alu_control_signals);
           alu_control_signals[0] = 1'bx;
         end  
       //5.2 Privileged Instruction
+      6'h01: //di
+        begin
+          alu_control_signals[19:18] = 2'b0;
+          alu_control_signals[17:14] = 4'b0;         
+          alu_control_signals[13:12] = 2'b0;
+          alu_control_signals[11:5] = 7'b0;
+          alu_control_signals[4:3] = 2'b0;
+          alu_control_signals[2:1] = 2'b0;
+          alu_control_signals[0] = 1'b0;
+        end
+      6'h02: //ei
+        begin
+          alu_control_signals[19:18] = 2'b0;
+          alu_control_signals[17:14] = 4'b0;         
+          alu_control_signals[13:12] = 2'b0;
+          alu_control_signals[11:5] = 7'b0;
+          alu_control_signals[4:3] = 2'b0;
+          alu_control_signals[2:1] = 2'b0;
+          alu_control_signals[0] = 1'b0;
+        end
+      6'h31: //reti
+        begin
+          alu_control_signals[19:18] = 2'b00;
+          alu_control_signals[17:14] = 4'b000_0;         
+          alu_control_signals[13:12] = 2'b0_0;
+          alu_control_signals[11:5] = 7'b0_0_0000_0;
+          alu_control_signals[4:3] = 2'b1_1;
+          alu_control_signals[2:1] = 2'b10;
+          alu_control_signals[0] = 1'b0;
+        end
+      6'h2d: //halt
+        begin
+          alu_control_signals[19:18] = 2'b0;
+          alu_control_signals[17:14] = 4'b0;         
+          alu_control_signals[13:12] = 2'b0;
+          alu_control_signals[11:5] = 7'b0;
+          alu_control_signals[4:3] = 2'b0;
+          alu_control_signals[2:1] = 2'b0;
+          alu_control_signals[0] = 1'b0;
+        end        
+      //5.11 User/Kernel Interaction 
+      6'h2e: //trap
+        begin
+          alu_control_signals[19:18] = 2'b0;
+          alu_control_signals[17:14] = 4'b0;         
+          alu_control_signals[13:12] = 2'b0;
+          alu_control_signals[11:5] = 7'b0;
+          alu_control_signals[4:3] = 2'b0;
+          alu_control_signals[2:1] = 2'b0;
+          alu_control_signals[0] = 1'b0;
+        end       
       //5.8 Floating Point Arhithmethic
       //itof 1000
       //ftoi 1001
@@ -429,8 +480,7 @@ module alu_control(opcode, alu_control_signals);
           alu_control_signals[4:3] = 2'b0_1;
           alu_control_signals[2:1] = 2'bxx;
           alu_control_signals[0] = 1'b0;
-        end
-      //5.11 User/Kernel Interaction  
+        end 
         
       default: //nop
         begin
@@ -558,7 +608,7 @@ module imm_extend(ctr, field, imm_s);
   end
 endmodule
 
-module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, Px, Py, Rx, Ry, Fx, Fy, Z, EX, MEM, WB, JMP, OPC, Pval, Y_id, X_id, jmp_i); //jump target is computed here
+module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, Px, Py, Rx, Ry, Fx, Fy, Z, EX, MEM, WB, JMP, OPC, Pval, Y_id, X_id, jmp_i, set_mask, epc, interrupt1, interrupt0); //jump target is computed here
   input clk;
   input rst;
   input [31:0] pc_n;
@@ -570,6 +620,7 @@ module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, 
   input [3:0] Rz_id;
   input [31:0] Fz;
   input [3:0] Fz_id;
+  input [31:0] epc;
  
   output Px;
   output Py;
@@ -588,6 +639,8 @@ module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, 
   output [3:0] Y_id;
   output [3:0] X_id;
   output [31:0] jmp_i;
+  output reg [1:0] set_mask;
+  output interrupt1, interrupt0;
   
   wire [3:0] X;
   wire [3:0] Y;
@@ -602,6 +655,18 @@ module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, 
   assign Pid = inst[30:29];
   assign Y_id = Y;
   assign X_id = X;
+  
+  always @(*) begin
+    case (inst[28:23])
+      6'h01 : set_mask = 2'b10; //di
+      6'h02 : set_mask = 2'b01; //ei
+      6'h2d : set_mask = 2'b11; //halt
+      default: set_mask = 2'b00;
+    endcase
+  end
+  
+  assign interrupt1 = (inst[28:23] > 6'b111001) ? 1 : 0; //unknown opcode;
+  assign interrupt0 = (inst[28:23] == 6'b101110) ? 1 : 0; //TRAP
   
   preg_file pregs(.rst(rst), .rw(rw[0]), .X(X[1:0]), .Y(Y[1:0]), .Z(Pz_id), .Pset(Pset), .Pid(Pid), .Pz(Pz), .Px(Px), .Py(Py), .Pval(Pval));
   greg_file gregs(.rst(rst), .rw(rw[1]), .X(X), .Y(Y), .Z(Rz_id), .Rz(Rz), .Rx(Rx), .Ry(Ry));
@@ -618,6 +683,6 @@ module decode(clk, rst, pc_n, inst, Pz_id, Pz, Rz_id, Rz, Fz_id, Fz, imm_s, rw, 
   
   assign OPC = signals[19:18];
   
-  assign jmp_i = pc_n + imm_s;
+  assign jmp_i = (inst[28:23] == 6'b110001) ? epc : pc_n + imm_s; //reti is a kind of jmpi
   
 endmodule
