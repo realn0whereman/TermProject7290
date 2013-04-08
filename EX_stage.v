@@ -470,7 +470,7 @@ module execution(EX, clk, rst, Px, Py, Rx, Ry, Fx, Fy, imm_s, pc_n, WB_in, p1_mu
   alu_F F1(.sel(!EX[0] & EX[4]),.clk(clk), .op(EX[3:1]), .A(FPU_src1), .B(FPU_src2),.C(Ry), .Z(result_F_buf),.stall(BUSY_F),.exception(exception_wire));
 
   assign BUSY = ((BUSY_I & EX[0]) | (BUSY_F & !EX[0] & EX[4])) ;
-  assign exception = exception_wire & EX[3:1] == 3'b110;
+  assign exception = exception_wire & (EX[3:1] == 3'b110);
   assign result_I = (EX[4:1] == 4'b1001) ? result_F_buf : result_I_buf;
   assign result_F = result_F_buf;
 endmodule
