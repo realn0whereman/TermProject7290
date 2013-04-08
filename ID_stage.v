@@ -343,7 +343,7 @@ module alu_control(opcode, alu_control_signals);
           alu_control_signals[19:18] = 2'b00;
           alu_control_signals[17:14] = 4'b100_0;         
           alu_control_signals[13:12] = 2'b0_0;
-          alu_control_signals[11:5] = 7'b0_0_1010_0;
+          alu_control_signals[11:5] = 7'b0_0_1000_0;
           alu_control_signals[4:3] = 2'bx_0;
           alu_control_signals[2:1] = 2'bxx;
           alu_control_signals[0] = 1'b1;
@@ -358,6 +358,13 @@ module alu_control(opcode, alu_control_signals);
       
       6'h34: //ftoi 1001
         begin
+          alu_control_signals[19:18] = 2'b00;
+          alu_control_signals[17:14] = 4'b010_0;         
+          alu_control_signals[13:12] = 2'b0_0;
+          alu_control_signals[11:5] = 7'b0_0_1001_0;
+          alu_control_signals[4:3] = 2'bx_0;
+          alu_control_signals[2:1] = 2'bxx;
+          alu_control_signals[0] = 1'b1;
         end
       6'h39: //fneg
         begin
@@ -550,8 +557,10 @@ module freg_file(rst, rw, X, Y, Z, Fz, Fx, Fy);
       for(i=0; i<16; i=i+1) begin
         fregs[i] <= 0;
       end
-      fregs[1] <= 32'h40400000;
+      //fregs[1] <= 32'h40400000;
+      fregs[1] <= 32'h4091999A;
       fregs[3] <= 32'h40800000;
+      fregs[5] <= 32'h40200000;
     end else begin 
       if(rw == 1)
         fregs[Z] <= Fz;
