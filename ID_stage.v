@@ -336,8 +336,7 @@ module alu_control(opcode, alu_control_signals);
           alu_control_signals[0] = 1'bx;
         end  
       //5.2 Privileged Instruction
-      //5.8 Floating Point Arhithmethic
-      
+      //5.8 Floating Point Arhithmethic      
       6'h33: //itof 1000
         begin
           alu_control_signals[19:18] = 2'b00;
@@ -348,14 +347,6 @@ module alu_control(opcode, alu_control_signals);
           alu_control_signals[2:1] = 2'bxx;
           alu_control_signals[0] = 1'b1;
         end
-      //     0 : Reg ID sel
-  //   2:1 : sign extension
-  //   4:3 : jump signal (reserved); 3: is jump, 4: r/i
-  //  11:5 : EX; 5: PF or I, 6:9: AluOP, 10: Src2 sel, 11: link?
-  // 13:12 : MEM; 12: MemR, 13: MemW
-  // 17:14 : WB; 14: RegMem, 15: rw_P, 16: rw_R, 17: rw_F 
-  // 19:18 : opc_type: 0: contains Ry ?, 1: contains Rx ?
-      
       6'h34: //ftoi 1001
         begin
           alu_control_signals[19:18] = 2'b00;

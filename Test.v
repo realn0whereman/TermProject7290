@@ -1,4 +1,4 @@
-`timescale 1ns / 100ps
+`timescale 10ns / 100ps
 module a_MEM_test();
   reg clk,rst;
   reg [3:0] Z_in;
@@ -36,6 +36,32 @@ end
   
 endmodule
 
+module a_mul_test();
+  reg clk;
+  reg rst;
+  reg sel;
+  wire [31:0] Z ;
+  wire stall;
+  reg [31:0] A,B;
+  reg [2:0] op;
+initial begin
+  clk = 0;
+  rst = 1;
+  #3 rst = 0;
+  #2 op=3'b110; A= 32'h00000007; B=32'h00000003;
+ 
+end
+  always begin
+   #1 clk = ~clk;
+  end
+  wire [31:0] mulResult;
+  
+  IMul imul(
+	.clock(clk),
+	.dataa(A),
+	.datab(B),
+	.result(mulResult));
+endmodule
 
 module a_fpu_test();
   reg clk;
@@ -48,19 +74,24 @@ module a_fpu_test();
 initial begin
   clk = 0;
   rst = 1;
-  #2 rst = 0;
-  //#2 op=3'b011; A= 32'h41200000; B=32'h40000000;
-  #3 op=3'b101; A= 32'h41200000; B=32'h40000000; sel = 1;
+  #3 rst = 0;
+  #2 op=3'b110; A= 32'h41200000; B=32'h00000000; sel = 1;
+  #6 op=3'b110; A= 32'h41200000; B=32'h40000000; sel = 1;
 end
   always begin
    #1 clk = ~clk;
   end
   
-  FPFtoI ftoi(
-	clk,
-	A,
-	Z);         
-  //alu_F fpu(1'b1,clk,sel,rst, op, A, B, Z,stall);
+  wire exception_wire;
+  wire [31:0] divResult;
+  
+  FPDiv divFU(
+	.aclr(1'b0),
+	.clock(clk),
+	.dataa(A),
+	.datab(B),
+	.division_by_zero(exception_wire),
+	.result(divResult));
 endmodule
 
 module a_pipeline_test();

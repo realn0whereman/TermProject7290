@@ -60,6 +60,10 @@ module alu_I(clk,sel, op, A, B, Z,stall);
   reg [3:0] latency;
   stall_counter stalls(.clk(clk),.sel(sel),.latency(latency),.stall(stall));
   
+  initial begin
+    latency = 0;
+  end
+  
   IMul imul(
 	.clock(clk),
 	.dataa(A),
@@ -87,7 +91,7 @@ module alu_I(clk,sel, op, A, B, Z,stall);
           end
         4'b0011: //mul FIXME
           begin
-            //latency <= 6;
+            latency = 6+1;
             Z = mulResult;
           end
         4'b0100: //div FIXME
@@ -138,11 +142,12 @@ module alu_I(clk,sel, op, A, B, Z,stall);
           end
         default:
           begin
+            latency = 0;
             Z = 'bx;
           end
       endcase
     end else begin
-      
+      latency = 0;
       Z = 'bx;
     end
   end
@@ -238,19 +243,7 @@ module alu_F(sel,clk, op, A, B, C, Z,stall,exception);
   end
   
   reg exception_real;
-  wire exception_wire;
-  //wire exception_wire;
-  /*always @(posedge clk) begin
-    stall_buf = stall_wire;
-  end
-  always@(*) begin
-    if(stall_wire == 0 && stall_buf == 1 && exception_wire == 1'b1) begin
-      exception_real = 1;
-    end else begin 
-      exception_real = 0;
-    end
-  end*/
-  
+  wire exception_wire;  
   assign exception = exception_wire;
 	FPAddSub addSubFU(
 	.add_sub(addSub),
@@ -287,13 +280,14 @@ module alu_F(sel,clk, op, A, B, C, Z,stall,exception);
 	.result(itofResult));
 	
 	
-	always @(posedge clk) begin
-	 if(exception_wire == 1'b1) begin
+	/*always @(posedge clk) begin
+	 if(exception_wire == 1'b1)  begin
 	   clear_reg = 1; 
 	 end else begin
 	   clear_reg = 0;
 	 end
-	end
+	end*/
+	
  
 	assign stall = stall_wire;
 	//do we need reset for multi cycle ops?
