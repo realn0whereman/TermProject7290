@@ -33,7 +33,7 @@
 //applicable agreement for further details.
 
 
-//altfp_div CBX_AUTO_BLACKBOX="ALL" DENORMAL_SUPPORT="NO" DEVICE_FAMILY="Stratix III" OPTIMIZE="SPEED" PIPELINE=6 REDUCED_FUNCTIONALITY="NO" WIDTH_EXP=8 WIDTH_MAN=23 clock dataa datab division_by_zero result
+//altfp_div CBX_AUTO_BLACKBOX="ALL" DENORMAL_SUPPORT="NO" DEVICE_FAMILY="Stratix III" OPTIMIZE="SPEED" PIPELINE=6 REDUCED_FUNCTIONALITY="NO" WIDTH_EXP=8 WIDTH_MAN=23 aclr clock dataa datab division_by_zero result
 //VERSION_BEGIN 12.1 cbx_altbarrel_shift 2012:11:07:18:03:51:SJ cbx_altfp_div 2012:11:07:18:03:51:SJ cbx_altsyncram 2012:11:07:18:03:51:SJ cbx_cycloneii 2012:11:07:18:03:51:SJ cbx_lpm_abs 2012:11:07:18:03:51:SJ cbx_lpm_add_sub 2012:11:07:18:03:51:SJ cbx_lpm_compare 2012:11:07:18:03:51:SJ cbx_lpm_decode 2012:11:07:18:03:51:SJ cbx_lpm_divide 2012:11:07:18:03:51:SJ cbx_lpm_mult 2012:11:07:18:03:51:SJ cbx_lpm_mux 2012:11:07:18:03:51:SJ cbx_mgl 2012:11:07:18:06:30:SJ cbx_padd 2012:11:07:18:03:51:SJ cbx_stratix 2012:11:07:18:03:51:SJ cbx_stratixii 2012:11:07:18:03:51:SJ cbx_stratixiii 2012:11:07:18:03:51:SJ cbx_stratixv 2012:11:07:18:03:51:SJ cbx_util_mgl 2012:11:07:18:03:51:SJ  VERSION_END
 // synthesis VERILOG_INPUT_VERSION VERILOG_2001
 // altera message_off 10463
@@ -940,22 +940,30 @@ endmodule //FPDiv_altfp_div_pst_dag
 //synopsys translate_off
 `timescale 1 ps / 1 ps
 //synopsys translate_on
-module  FPDiv_altfp_div_13j
+module  FPDiv_altfp_div_3hj
 	( 
+	aclr,
 	clock,
 	dataa,
 	datab,
 	division_by_zero,
 	result) ;
+	input   aclr;
 	input   clock;
 	input   [31:0]  dataa;
 	input   [31:0]  datab;
 	output   division_by_zero;
 	output   [31:0]  result;
+`ifndef ALTERA_RESERVED_QIS
+// synopsys translate_off
+`endif
+	tri0   aclr;
+`ifndef ALTERA_RESERVED_QIS
+// synopsys translate_on
+`endif
 
 	wire  wire_altfp_div_pst1_division_by_zero;
 	wire  [31:0]   wire_altfp_div_pst1_result;
-	wire aclr;
 	wire clk_en;
 
 	FPDiv_altfp_div_pst_dag   altfp_div_pst1
@@ -968,11 +976,10 @@ module  FPDiv_altfp_div_13j
 	.division_by_zero(wire_altfp_div_pst1_division_by_zero),
 	.result(wire_altfp_div_pst1_result));
 	assign
-		aclr = 1'b0,
 		clk_en = 1'b1,
 		division_by_zero = wire_altfp_div_pst1_division_by_zero,
 		result = wire_altfp_div_pst1_result;
-endmodule //FPDiv_altfp_div_13j
+endmodule //FPDiv_altfp_div_3hj
 //VALID FILE
 
 
@@ -980,12 +987,14 @@ endmodule //FPDiv_altfp_div_13j
 `timescale 1 ps / 1 ps
 // synopsys translate_on
 module FPDiv (
+	aclr,
 	clock,
 	dataa,
 	datab,
 	division_by_zero,
 	result);
 
+	input	  aclr;
 	input	  clock;
 	input	[31:0]  dataa;
 	input	[31:0]  datab;
@@ -997,7 +1006,8 @@ module FPDiv (
 	wire  division_by_zero = sub_wire0;
 	wire [31:0] result = sub_wire1[31:0];
 
-	FPDiv_altfp_div_13j	FPDiv_altfp_div_13j_component (
+	FPDiv_altfp_div_3hj	FPDiv_altfp_div_3hj_component (
+				.aclr (aclr),
 				.clock (clock),
 				.datab (datab),
 				.dataa (dataa),
@@ -1019,11 +1029,13 @@ endmodule
 // Retrieval info: CONSTANT: REDUCED_FUNCTIONALITY STRING "NO"
 // Retrieval info: CONSTANT: WIDTH_EXP NUMERIC "8"
 // Retrieval info: CONSTANT: WIDTH_MAN NUMERIC "23"
+// Retrieval info: USED_PORT: aclr 0 0 0 0 INPUT NODEFVAL "aclr"
 // Retrieval info: USED_PORT: clock 0 0 0 0 INPUT NODEFVAL "clock"
 // Retrieval info: USED_PORT: dataa 0 0 32 0 INPUT NODEFVAL "dataa[31..0]"
 // Retrieval info: USED_PORT: datab 0 0 32 0 INPUT NODEFVAL "datab[31..0]"
 // Retrieval info: USED_PORT: division_by_zero 0 0 0 0 OUTPUT NODEFVAL "division_by_zero"
 // Retrieval info: USED_PORT: result 0 0 32 0 OUTPUT NODEFVAL "result[31..0]"
+// Retrieval info: CONNECT: @aclr 0 0 0 0 aclr 0 0 0 0
 // Retrieval info: CONNECT: @clock 0 0 0 0 clock 0 0 0 0
 // Retrieval info: CONNECT: @dataa 0 0 32 0 dataa 0 0 32 0
 // Retrieval info: CONNECT: @datab 0 0 32 0 datab 0 0 32 0
@@ -1034,4 +1046,4 @@ endmodule
 // Retrieval info: GEN_FILE: TYPE_NORMAL FPDiv.cmp FALSE
 // Retrieval info: GEN_FILE: TYPE_NORMAL FPDiv.bsf FALSE
 // Retrieval info: GEN_FILE: TYPE_NORMAL FPDiv_inst.v FALSE
-// Retrieval info: GEN_FILE: TYPE_NORMAL FPDiv_bb.v TRUE
+// Retrieval info: GEN_FILE: TYPE_NORMAL FPDiv_bb.v FALSE

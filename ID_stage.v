@@ -388,8 +388,35 @@ module alu_control(opcode, alu_control_signals);
           alu_control_signals[0] = 1'b0;
         end       
       //5.8 Floating Point Arhithmethic
-      //itof 1000
-      //ftoi 1001
+      
+      6'h33: //itof 1000
+        begin
+          alu_control_signals[19:18] = 2'b00;
+          alu_control_signals[17:14] = 4'b100_0;         
+          alu_control_signals[13:12] = 2'b0_0;
+          alu_control_signals[11:5] = 7'b0_0_1000_0;
+          alu_control_signals[4:3] = 2'bx_0;
+          alu_control_signals[2:1] = 2'bxx;
+          alu_control_signals[0] = 1'b1;
+        end
+      //     0 : Reg ID sel
+  //   2:1 : sign extension
+  //   4:3 : jump signal (reserved); 3: is jump, 4: r/i
+  //  11:5 : EX; 5: PF or I, 6:9: AluOP, 10: Src2 sel, 11: link?
+  // 13:12 : MEM; 12: MemR, 13: MemW
+  // 17:14 : WB; 14: RegMem, 15: rw_P, 16: rw_R, 17: rw_F 
+  // 19:18 : opc_type: 0: contains Ry ?, 1: contains Rx ?
+      
+      6'h34: //ftoi 1001
+        begin
+          alu_control_signals[19:18] = 2'b00;
+          alu_control_signals[17:14] = 4'b010_0;         
+          alu_control_signals[13:12] = 2'b0_0;
+          alu_control_signals[11:5] = 7'b0_0_1001_0;
+          alu_control_signals[4:3] = 2'bx_0;
+          alu_control_signals[2:1] = 2'bxx;
+          alu_control_signals[0] = 1'b1;
+        end
       6'h39: //fneg
         begin
           alu_control_signals[19:18] = 2'b00;
@@ -398,7 +425,7 @@ module alu_control(opcode, alu_control_signals);
           alu_control_signals[11:5] = 7'b0_0_1010_0;
           alu_control_signals[4:3] = 2'bx_0;
           alu_control_signals[2:1] = 2'bxx;
-          alu_control_signals[0] = 1'b0;
+          alu_control_signals[0] = 1'b1;
         end 
       6'h35: //fadd
         begin
@@ -408,7 +435,7 @@ module alu_control(opcode, alu_control_signals);
           alu_control_signals[11:5] = 7'b0_0_1011_0;
           alu_control_signals[4:3] = 2'bx_0;
           alu_control_signals[2:1] = 2'bxx;
-          alu_control_signals[0] = 1'b0;
+          alu_control_signals[0] = 1'b1;
         end 
       6'h36: //fsub
         begin
@@ -418,7 +445,7 @@ module alu_control(opcode, alu_control_signals);
           alu_control_signals[11:5] = 7'b0_0_1100_0;
           alu_control_signals[4:3] = 2'bx_0;
           alu_control_signals[2:1] = 2'bxx;
-          alu_control_signals[0] = 1'b0;
+          alu_control_signals[0] = 1'b1;
         end 
       6'h37: //fmul
         begin
@@ -428,7 +455,7 @@ module alu_control(opcode, alu_control_signals);
           alu_control_signals[11:5] = 7'b0_0_1101_0;
           alu_control_signals[4:3] = 2'bx_0;
           alu_control_signals[2:1] = 2'bxx;
-          alu_control_signals[0] = 1'b0;
+          alu_control_signals[0] = 1'b1;
         end 
       6'h38: //fdiv
         begin
@@ -438,7 +465,7 @@ module alu_control(opcode, alu_control_signals);
           alu_control_signals[11:5] = 7'b0_0_1110_0;
           alu_control_signals[4:3] = 2'bx_0;
           alu_control_signals[2:1] = 2'bxx;
-          alu_control_signals[0] = 1'b0;
+          alu_control_signals[0] = 1'b1;
         end 
       //5.9 Control Flow
       6'h1d: //jmpi
@@ -580,9 +607,10 @@ module freg_file(rst, rw, X, Y, Z, Fz, Fx, Fy);
       for(i=0; i<16; i=i+1) begin
         fregs[i] <= 0;
       end
-      fregs[0] <=  32'h40000000;
-      fregs[1] <=  32'h40800000;
-      
+      //fregs[1] <= 32'h40400000;
+      fregs[1] <= 32'h4091999A;
+      fregs[3] <= 32'h40800000;
+      fregs[5] <= 32'h40200000;
     end else begin 
       if(rw == 1)
         fregs[Z] <= Fz;

@@ -14,7 +14,7 @@ module pipeline(clk, rst);
   wire [6:0] EX_id, EX_ex;
   wire [3:0] Z_id, Z_ex, Z_mm, Z_mm_buf, Z_wb;
   wire [1:0] MEM_id, MEM_ex, MEM_mm;
-  wire [3:0] WB_id, WB_ex, WB_mm, WB_mm_buf;
+  wire [3:0] WB_id, WB_ex,WB_ex_buf, WB_mm, WB_mm_buf;
   wire ResP_ex, ResP_mm;
   wire [31:0] ResI_ex, ResI_mm, ResI_mm_buf, ResI_wb, ResI_final;
   wire [31:0] ResF_ex, ResF_mm;
@@ -37,13 +37,12 @@ module pipeline(clk, rst);
   wire [1:0] OPC_id;
   wire busy_ex, busy_mm;
   
-  //stall
-  wire [1:0] set_mask;
-  wire [31:0] pc_if, pc_id, pc_ex;
-  wire [31:0] epc;
+  //interrupt
+  wire [1:0] set_mask; 
+  wire [31:0] pc_if, pc_id, pc_ex;
+  wire [31:0] epc;
   
-  wire [1:0] ctrl;
-  reg ctrl3;
+  wire [2:0] ctrl;
   
   wire [1:0] ctrl_ifid;
   wire [1:0] ctrl_idex;
@@ -54,16 +53,9 @@ module pipeline(clk, rst);
   defparam preg_idex.N = 251;
   defparam preg_exmm.N = 107;
   defparam preg_mmwb.N = 70;
-
-  
-  always @(posedge clk) begin
-    if (rst == 1'b1) begin
-      ctrl3 <= 1'b0;
-    end
-  end
   
   //Pipeline control signal generation
-  pipeline_ctrl pc(.rst(rst), .clk(clk), .pval(pval_id), .ex_busy(busy_ex), .mm_busy(busy_mm), .jmp(JMP_id), .intp({ctrl3, ctrl}), .is_load(MEM_ex[0]), 
+  pipeline_ctrl pc(.rst(rst), .clk(clk), .pval(pval_id), .ex_busy(busy_ex), .mm_busy(busy_mm), .jmp(JMP_id), .intp(ctrl), .is_load(MEM_ex[0]), 
     .opc_type(OPC_id), .Rx_id(X_id), .Ry_id(Y_id), .Z_ex(Z_ex), .ifid_ctr(ctrl_ifid), .idex_ctr(ctrl_idex), .exmm_ctr(ctrl_exmm), .mmwb_ctr(ctrl_mmwb),
     .jmp_type(jmp_type), .set_mask(set_mask), .pc_id(pc_id), .pc_ex(pc_ex), .epc(epc));
   
@@ -79,14 +71,13 @@ module pipeline(clk, rst);
   decode de_stage(.rst(rst), .clk(clk), .pc_n(pc_n_id), .inst(inst_id), .Pz_id(Z_mm[1:0]), .Pz(ResP_mm), .Rz_id(Z_wb), .Rz(ResI_final),
     .Fz_id(Z_mm), .Fz(ResF_mm), .imm_s(imm_id), .rw({WB_mm[3], WB_wb[1], WB_mm[1]}), .Px(Px_id), .Py(Py_id), .Rx(Rx_id), .Ry(Ry_id), .set_mask(set_mask), .epc(epc),
     .Fx(Fx_id), .Fy(Fy_id), .Z(Z_id), .EX(EX_id), .MEM(MEM_id), .WB(WB_id), .JMP(JMP_id), .OPC(OPC_id), .Pval(pval_id), .Y_id(Y_id), .X_id(X_id), .jmp_i(jmpi_id),
-    .interrupt0(ctrl[0]), .interrupt1(ctrl[1]));
+    .interrupt0(ctrl[2]), .interrupt1(ctrl[1]));
   LatchN preg_idex(.rst(rst), .clk(clk), .ctr(ctrl_idex), .data_in({pc_n_id, imm_id, Z_id, Y_id, X_id, Fy_id, Fx_id, Ry_id, Rx_id, Py_id, Px_id, 
-    EX_id, MEM_id, WB_id, pc_id}), .data_out({pc_n_ex, imm_ex, Z_ex, Y_ex, X_ex, Fy_ex, Fx_ex, Ry_ex, Rx_ex, Py_ex, Px_ex, EX_ex, MEM_ex, WB_ex, pc_ex}));
+    EX_id, MEM_id, WB_id, pc_id}), .data_out({pc_n_ex, imm_ex, Z_ex, Y_ex, X_ex, Fy_ex, Fx_ex, Ry_ex, Rx_ex, Py_ex, Px_ex, EX_ex, MEM_ex, WB_ex_buf, pc_ex}));
   
-  //Execute Stage + EX/MEM Latch:
-   execution ex_stage(.EX(EX_ex), .clk(clk),.rst(rst), .Px(Px_ex), .Py(Py_ex), .Rx(Rx_ex), .Ry(Ry_ex), .Fx(Fx_ex), .Fy(Fy_ex), .imm_s(imm_ex), .pc_n(pc_n_ex), 
+   execution exe(.EX(EX_ex), .clk(clk),.rst(rst), .Px(Px_ex), .Py(Py_ex), .Rx(Rx_ex), .Ry(Ry_ex), .Fx(Fx_ex), .Fy(Fy_ex), .imm_s(imm_ex), .pc_n(pc_n_ex), .WB_in(WB_ex_buf),
     .result_P(ResP_ex), .result_I(ResI_ex), .result_F(ResF_ex), .Wdata(Wdata_ex), .p1_mux(p1_mux), .p2_mux(p2_mux), .r1_mux(r1_mux), .r2_mux(r2_mux),
-    .wdata_mux(wdata_mux), .f1_mux(f1_mux), .f2_mux(f2_mux), .pval_mm(ResP_mm), .rval_mm(ResI_mm), .rval_wb(ResI_final), .fval_mm(ResF_mm), .BUSY(busy_ex));
+    .wdata_mux(wdata_mux), .f1_mux(f1_mux), .f2_mux(f2_mux), .pval_mm(ResP_mm), .rval_mm(ResI_mm), .rval_wb(ResI_final), .fval_mm(ResF_mm), .BUSY(busy_ex), .WB_out(WB_ex),.exception(ctrl[0]));
     
   LatchN preg_exmm(.rst(rst), .clk(clk), .ctr(ctrl_exmm), .data_in({Z_ex, ResI_ex, ResF_ex, ResP_ex, Wdata_ex, MEM_ex, WB_ex}), 
     .data_out({Z_mm, ResI_mm, ResF_mm, ResP_mm, Wdata_mm, MEM_mm, WB_mm}));
