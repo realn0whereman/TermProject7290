@@ -1,4 +1,4 @@
-`timescale 10ns / 100ps
+`timescale 1 ns / 100 ps
 module a_MEM_test();
   reg clk,rst;
   reg [3:0] Z_in;

@@ -199,11 +199,15 @@ module  FPDiv_altfp_div_pst_dag
 	wire  [8:0]  value_add_one_w;
 	wire  [8:0]  value_normal_w;
 	wire  [8:0]  value_zero_w;
+	
+	wire clock_wire;
+	
+	assign clock_wire = clock;
 
 	altsyncram   altsyncram3
 	( 
 	.address_a(datab[22:14]),
-	.clock0(clock),
+	.clock0(clock_wire),
 	.clocken0(clk_en),
 	.eccstatus(),
 	.q_a(wire_altsyncram3_q_a),
